@@ -277,7 +277,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 	// add a request header
-	req.Header.Add("x-spinnaker-user", "admin")
+	req.Header.Add("x-spinnaker-user", metric.Provider.OPSMX.User)
 	req.Header.Add("Content-Type", "application/json")
 
 	// send an HTTP using `req` object
