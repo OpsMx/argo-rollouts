@@ -28,6 +28,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testapp",
+						User:                "admin",
 						Baseline_start_time: "2022-07-29T13:15:00Z",
 						Canary_start_time:   "2022-07-29T13:15:00Z",
 						LifetimeHours:       "0.5",
@@ -48,6 +49,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testapp",
+						User:                "admin",
 						Baseline_start_time: "2022-08-10T13:15:00Z",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
@@ -69,6 +71,7 @@ func TestRunSuccessfully(t *testing.T) {
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testapp",
 						Baseline_start_time: "",
+						User:                "admin",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
@@ -89,6 +92,7 @@ func TestRunSuccessfully(t *testing.T) {
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "multiservice",
 						Baseline_start_time: "",
+						User:                "admin",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
@@ -118,6 +122,7 @@ func TestRunSuccessfully(t *testing.T) {
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "multiservice",
 						Baseline_start_time: "",
+						User:                "admin",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
@@ -154,6 +159,7 @@ func TestRunSuccessfully(t *testing.T) {
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "multiservice",
 						Baseline_start_time: "",
+						User:                "admin",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
@@ -215,6 +221,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:      "https://ds312.isd-dev.opsmx.net/",
 						Application:   "testapp",
+						User:                "admin",
 						LifetimeHours: "0.05",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
@@ -231,6 +238,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "multiservice",
+						User:                "admin",
 						Baseline_start_time: "",
 						Canary_start_time:   "2022-08-10T13:15:00Z",
 						End_time:            "2022-08-10T13:45:10Z",
@@ -262,6 +270,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:    "https://ds312.isd-dev.opsmx.net/",
 						Application: "testapp",
+						User:                "admin",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -278,6 +287,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testapp",
+						User:                "admin",
 						Baseline_start_time: "2022-08-02T13:15:00Z",
 						Canary_start_time:   "2022-08-02T13:15:00Z",
 						LifetimeHours:       "0.05",
@@ -297,6 +307,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testapp",
+						User:                "admin",
 						Baseline_start_time: "2022-08-02T13:15:00Z",
 						Canary_start_time:   "2022-O8-02T13:15:00Z",
 						LifetimeHours:       "0.05",
@@ -316,6 +327,7 @@ func TestRunSuccessfully(t *testing.T) {
 					OPSMX: &v1alpha1.OPSMXMetric{
 						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
 						Application:         "testap",
+						User:                "admin",
 						Baseline_start_time: "2022-08-02T13:15:00Z",
 						Canary_start_time:   "2022-08-02T13:15:00Z",
 						LifetimeHours:       "0.05",
