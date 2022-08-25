@@ -264,7 +264,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		}
 		jobPayload = fmt.Sprintf(JobPayloadwServices, metric.Provider.OPSMX.Application, metric.Provider.OPSMX.LifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime, ServiceJobPayload)
 	}
-
+	//fmt.Printf("%s", jobPayload)
 	// create a request object
 	reqBody := strings.NewReader(jobPayload)
 	req, err := http.NewRequest(
@@ -294,6 +294,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	res.Body.Close()
 
 	checkvalid := json.Valid(data)
+	//fmt.Printf("%s", data)
 	if checkvalid {
 		json.Unmarshal(data, &canary)
 		if isNil(canary["message"]) {
@@ -310,6 +311,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				return metricutil.MarkMeasurementError(newMeasurement, err)
 			} else {
 				err = errors.New(str1)
+				fmt.Printf("\n\n%s\n\n", str1)
 				return metricutil.MarkMeasurementError(newMeasurement, err)
 			}
 		}
@@ -363,14 +365,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		}
 	}
 	res.Body.Close()
-
 	checkvalid = json.Valid(data)
 	if checkvalid {
 		json.Unmarshal(data, &result)
 		jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
 		json.Unmarshal(jsonBytes, &finalScore)
 		if isNil(finalScore["overallScore"]) {
-			canaryScore = "0"
+			canaryScore = "100"
 		} else {
 			canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 		}
