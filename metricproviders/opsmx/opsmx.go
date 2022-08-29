@@ -227,7 +227,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	if metric.Provider.OPSMX.Threshold.Pass <= metric.Provider.OPSMX.Threshold.Marginal {
-		err := errors.New("pass score cannot be greater than marginal score")
+		err := errors.New("pass score cannot be less than marginal score")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
