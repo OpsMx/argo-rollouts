@@ -436,15 +436,15 @@ type Measurement struct {
 }
 
 type OPSMXMetric struct {
-	User                string         `json:"user" protobuf:"bytes,1,opt,name=user"`
-	Gate_url            string         `json:"gateUrl" protobuf:"bytes,2,opt,name=gateUrl"`
-	Application         string         `json:"application" protobuf:"bytes,3,opt,name=application"`
-	Baseline_start_time string         `json:"baselineStartTime,omitempty" protobuf:"bytes,4,opt,name=baselineStartTime"`
-	Canary_start_time   string         `json:"canaryStartTime,omitempty" protobuf:"bytes,5,opt,name=canaryStartTime"`
-	LifetimeHours       string         `json:"lifetimeHours,omitempty" protobuf:"bytes,6,opt,name=lifetimeHours"`
-	End_time            string         `json:"endTime,omitempty" protobuf:"bytes,7,opt,name=endTime"`
-	Threshold           OPSMXThreshold `json:"threshold" protobuf:"bytes,9,opt,name=threshold"`
-	Services            []OPSMXService `json:"services,omitempty" protobuf:"bytes,10,rep,name=services"`
+	User              string         `json:"user" protobuf:"bytes,1,opt,name=user"`
+	GateUrl           string         `json:"gateUrl" protobuf:"bytes,2,opt,name=gateUrl"`
+	Application       string         `json:"application" protobuf:"bytes,3,opt,name=application"`
+	BaselineStartTime string         `json:"baselineStartTime,omitempty" protobuf:"bytes,4,opt,name=baselineStartTime"`
+	CanaryStartTime   string         `json:"canaryStartTime,omitempty" protobuf:"bytes,5,opt,name=canaryStartTime"`
+	LifetimeHours     string         `json:"lifetimeHours,omitempty" protobuf:"bytes,6,opt,name=lifetimeHours"`
+	EndTime           string         `json:"endTime,omitempty" protobuf:"bytes,7,opt,name=endTime"`
+	Threshold         OPSMXThreshold `json:"threshold" protobuf:"bytes,9,opt,name=threshold"`
+	Services          []OPSMXService `json:"services,omitempty" protobuf:"bytes,10,rep,name=services"`
 }
 
 type OPSMXService struct {
