@@ -7,7 +7,7 @@ import (
 
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/tj/assert"
 )
 
 const (
@@ -26,12 +26,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testappy",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testapp",
-						User:                "admin",
-						Baseline_start_time: "2022-07-29T13:15:00Z",
-						Canary_start_time:   "2022-07-29T13:15:00Z",
-						LifetimeHours:       "0.5",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "user1",
+						Application:       "testapp",
+						BaselineStartTime: "2022-07-29T13:15:00Z",
+						CanaryStartTime:   "2022-07-29T13:15:00Z",
+						LifetimeHours:     "0.5",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -47,12 +47,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testapp",
-						User:                "admin",
-						Baseline_start_time: "2022-08-10T13:15:00Z",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "testapp",
+						BaselineStartTime: "2022-08-10T13:15:00Z",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -68,12 +68,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testapp",
-						Baseline_start_time: "",
-						User:                "admin",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "testapp",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -89,12 +89,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "multiservice",
-						Baseline_start_time: "",
-						User:                "admin",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -119,12 +119,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "multiservice",
-						Baseline_start_time: "",
-						User:                "admin",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						User:              "admin",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -156,12 +156,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "multiservice",
-						Baseline_start_time: "",
-						User:                "admin",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -197,6 +197,7 @@ func TestRunSuccessfully(t *testing.T) {
 		c := NewTestHttpClient()
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
+		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		// Phase specific cases
 		switch test.expectedPhase {
 		case v1alpha1.AnalysisPhaseSuccessful:
@@ -219,9 +220,9 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:      "https://ds312.isd-dev.opsmx.net/",
+						GateUrl:       "https://ds312.isd-dev.opsmx.net/",
+						User:          "admin",
 						Application:   "testapp",
-						User:                "admin",
 						LifetimeHours: "0.05",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
@@ -236,12 +237,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "multiservice",
-						User:                "admin",
-						Baseline_start_time: "",
-						Canary_start_time:   "2022-08-10T13:15:00Z",
-						End_time:            "2022-08-10T13:45:10Z",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "multiservice",
+						User:              "admin",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -268,9 +269,9 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:    "https://ds312.isd-dev.opsmx.net/",
+						GateUrl:     "https://ds312.isd-dev.opsmx.net/",
 						Application: "testapp",
-						User:                "admin",
+						User:        "admin",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 65,
@@ -285,12 +286,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testapp",
-						User:                "admin",
-						Baseline_start_time: "2022-08-02T13:15:00Z",
-						Canary_start_time:   "2022-08-02T13:15:00Z",
-						LifetimeHours:       "0.05",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testapp",
+						User:              "admin",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						LifetimeHours:     "0.05",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     60,
 							Marginal: 80,
@@ -305,12 +306,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testapp",
-						User:                "admin",
-						Baseline_start_time: "2022-08-02T13:15:00Z",
-						Canary_start_time:   "2022-O8-02T13:15:00Z",
-						LifetimeHours:       "0.05",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testapp",
+						User:              "admin",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-O8-02T13:15:00Z",
+						LifetimeHours:     "0.05",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 60,
@@ -325,12 +326,12 @@ func TestRunSuccessfully(t *testing.T) {
 				Name: "testapp",
 				Provider: v1alpha1.MetricProvider{
 					OPSMX: &v1alpha1.OPSMXMetric{
-						Gate_url:            "https://ds312.isd-dev.opsmx.net/",
-						Application:         "testap",
-						User:                "admin",
-						Baseline_start_time: "2022-08-02T13:15:00Z",
-						Canary_start_time:   "2022-08-02T13:15:00Z",
-						LifetimeHours:       "0.05",
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testap",
+						User:              "admin",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						LifetimeHours:     "0.05",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 60,
@@ -346,6 +347,7 @@ func TestRunSuccessfully(t *testing.T) {
 		c := NewTestHttpClient()
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
+		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		// Phase specific cases
 		switch test.expectedPhase {
 		case v1alpha1.AnalysisPhaseSuccessful:
