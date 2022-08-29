@@ -109,7 +109,7 @@ func roundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
-func makeRequest(requestType string, url string, body string) ([]byte, error) {
+func makeRequest(requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
 	// create a request object
 	req, err := http.NewRequest(
@@ -123,7 +123,7 @@ func makeRequest(requestType string, url string, body string) ([]byte, error) {
 	}
 
 	// add a request header
-	req.Header.Add("x-spinnaker-user", "admin")
+	req.Header.Add("x-spinnaker-user", user)
 	req.Header.Add("Content-Type", "application/json")
 
 	// send an HTTP using `req` object
@@ -297,7 +297,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	// create a request object
-	data, err := makeRequest("POST", configIdLookupURL, jobPayload)
+	data, err := makeRequest("POST", configIdLookupURL, jobPayload, metric.Provider.OPSMX.User)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -359,7 +359,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	canaryId = measurement.Metadata["canaryId"]
 	scoreURL := fmt.Sprintf(scoreUrlFormat, metric.Provider.OPSMX.GateUrl, canaryId)
 
-	data, err := makeRequest("GET", scoreURL, "")
+	data, err := makeRequest("GET", scoreURL, "", metric.Provider.OPSMX.User)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
@@ -376,7 +376,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		} else {
 
 			time.Sleep(3 * time.Second)
-			data, _ = makeRequest("GET", scoreURL, "")
+			data, _ = makeRequest("GET", scoreURL, "", metric.Provider.OPSMX.User)
 		}
 	}
 	//res.Body.Close()
