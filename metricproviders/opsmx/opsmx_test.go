@@ -197,6 +197,7 @@ func TestRunSuccessfully(t *testing.T) {
 		c := NewTestHttpClient()
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
+		time.Sleep(resumeAfter)
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		// Phase specific cases
 		switch test.expectedPhase {
@@ -347,6 +348,7 @@ func TestRunSuccessfully(t *testing.T) {
 		c := NewTestHttpClient()
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
+		time.Sleep(resumeAfter)
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		// Phase specific cases
 		switch test.expectedPhase {

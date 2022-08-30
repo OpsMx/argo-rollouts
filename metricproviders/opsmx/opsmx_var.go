@@ -7,6 +7,8 @@ const (
 	configIdLookupURLFormat               = `%s/autopilot/api/v3/registerCanary`
 	scoreUrlFormat                        = `%s/autopilot/canaries/%s`
 	reportUrlFormat                       = `%sui/application/deploymentverification/%s/%s`
+	completeStatus                        = "RUNNING"
+	resumeAfter                           = 15 * time.Second
 	httpConnectionTimeout   time.Duration = 15 * time.Second
 	DefaultjobPayloadFormat               = `{
         "application": "%s",

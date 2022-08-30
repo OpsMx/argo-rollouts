@@ -23,6 +23,7 @@ import (
 	metricutil "github.com/argoproj/argo-rollouts/utils/metric"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Provider struct {
@@ -300,10 +301,15 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	reportUrl = fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
-	m := make(map[string]string)
-	m["canaryId"] = fmt.Sprintf("%v", canaryId)
-	m["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
-	newMeasurement.Metadata = m
+
+	//creating a map to return the reporturl and associated data
+	mapMetadata := make(map[string]string)
+	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
+	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
+
+	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
+	newMeasurement.Metadata = mapMetadata
+	newMeasurement.ResumeAt = &resumeTime
 	newMeasurement.Phase = v1alpha1.AnalysisPhaseRunning
 
 	return newMeasurement
@@ -335,20 +341,19 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
-	process := "RUNNING"
+	json.Unmarshal(data, &status)
+	a, _ := json.MarshalIndent(status["status"], "", "   ")
+	json.Unmarshal(a, &status)
+	fmt.Printf("%v", status)
 
-	//check till the system has finished running
-	for process == "RUNNING" {
-		json.Unmarshal(data, &status)
-		a, _ := json.MarshalIndent(status["status"], "", "   ")
-		json.Unmarshal(a, &status)
-		if status["status"] != "RUNNING" {
-			process = "COMPLETED"
-		} else {
+	//return the measurement if the status is Running, to be resumed at resumeTime
+	if status["status"] == completeStatus {
+		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
+		measurement.ResumeAt = &resumeTime
+		measurement.Phase = v1alpha1.AnalysisPhaseRunning
 
-			time.Sleep(3 * time.Second)
-			data, _ = makeRequest("GET", scoreURL, "", metric.Provider.OPSMX.User)
-		}
+		return measurement
+
 	}
 	//res.Body.Close()
 	checkvalid := json.Valid(data)
