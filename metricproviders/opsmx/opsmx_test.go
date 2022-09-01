@@ -21,6 +21,7 @@ func TestRunSuccessfully(t *testing.T) {
 		expectedPhase v1alpha1.AnalysisPhase
 		expectedValue string
 	}{
+		//Test case for basic function
 		{
 			metric: v1alpha1.Metric{
 				Name: "testappy",
@@ -42,6 +43,7 @@ func TestRunSuccessfully(t *testing.T) {
 			expectedValue: "100",
 			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
 		},
+		//Test case for endTime feature
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -63,6 +65,7 @@ func TestRunSuccessfully(t *testing.T) {
 			expectedValue: "100",
 			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
 		},
+		//Test case for only 1 time format given
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -84,6 +87,7 @@ func TestRunSuccessfully(t *testing.T) {
 			expectedValue: "100",
 			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
 		},
+		//Test case for Single Service feature
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -114,6 +118,7 @@ func TestRunSuccessfully(t *testing.T) {
 			expectedValue: "100",
 			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
 		},
+		//Test case for multi-service feature
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -151,6 +156,7 @@ func TestRunSuccessfully(t *testing.T) {
 			expectedValue: "100",
 			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
 		},
+		//Test case for multi-service feature along with logs+metrics analysis
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -176,6 +182,47 @@ func TestRunSuccessfully(t *testing.T) {
 							},
 							{
 								ServiceName:          "service2",
+								GateName:             "gate2",
+								MetricScopeVariables: "job_name",
+								BaselineMetricScope:  "oes-sapor-br",
+								CanaryMetricScope:    "oes-sapor-cr",
+								LogScopeVariables:    "kubernetes.container_name",
+								BaselineLogScope:     "oes-datascience-br",
+								CanaryLogScope:       "oes-datascience-cr",
+							},
+						},
+					},
+				},
+			},
+			expectedValue: "100",
+			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
+		},
+		//Test case for 1 incorrect service and one correct
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 65,
+						},
+						Services: []v1alpha1.OPSMXService{
+							{
+								ServiceName:          "service1",
+								GateName:             "gate1",
+								MetricScopeVariables: "job_name",
+								BaselineMetricScope:  "oes-platform-br",
+								CanaryMetricScope:    "oes-platform-cr",
+							},
+							{
+								ServiceName:          "service3",
 								GateName:             "gate2",
 								MetricScopeVariables: "job_name",
 								BaselineMetricScope:  "oes-sapor-br",
@@ -216,6 +263,7 @@ func TestRunSuccessfully(t *testing.T) {
 		metric        v1alpha1.Metric
 		expectedPhase v1alpha1.AnalysisPhase
 	}{
+		//Test case for Now feature
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -233,6 +281,7 @@ func TestRunSuccessfully(t *testing.T) {
 				},
 			},
 		},
+		//Test Case for No logs configured still passed in service
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -265,6 +314,64 @@ func TestRunSuccessfully(t *testing.T) {
 			},
 			expectedPhase: v1alpha1.AnalysisPhaseError,
 		},
+		//Test case for incorrect service name
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 65,
+						},
+						Services: []v1alpha1.OPSMXService{
+							{
+								ServiceName:          "service3",
+								GateName:             "gate1",
+								MetricScopeVariables: "job_name",
+								BaselineMetricScope:  "oes-datascience-br",
+								CanaryMetricScope:    "oes-datascience-cr",
+							},
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseFailed,
+		},
+		//Test case for no logs and metric analysis given while service was given
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						User:              "admin",
+						Application:       "multiservice",
+						BaselineStartTime: "",
+						CanaryStartTime:   "2022-08-10T13:15:00Z",
+						EndTime:           "2022-08-10T13:45:10Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 65,
+						},
+						Services: []v1alpha1.OPSMXService{
+							{
+								ServiceName: "service1",
+								GateName:    "gate1",
+							},
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseError,
+		},
+		//Test case for no lifetimeHours, Baseline/Canary start time
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -282,6 +389,7 @@ func TestRunSuccessfully(t *testing.T) {
 			},
 			expectedPhase: v1alpha1.AnalysisPhaseError,
 		},
+		//Test case for Pass score less than marginal
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -302,6 +410,7 @@ func TestRunSuccessfully(t *testing.T) {
 			},
 			expectedPhase: v1alpha1.AnalysisPhaseError,
 		},
+		//Test case for inappropriate time format
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -322,6 +431,7 @@ func TestRunSuccessfully(t *testing.T) {
 			},
 			expectedPhase: v1alpha1.AnalysisPhaseError,
 		},
+		//Test case for incorrect application name
 		{
 			metric: v1alpha1.Metric{
 				Name: "testapp",
@@ -333,6 +443,85 @@ func TestRunSuccessfully(t *testing.T) {
 						BaselineStartTime: "2022-08-02T13:15:00Z",
 						CanaryStartTime:   "2022-08-02T13:15:00Z",
 						LifetimeHours:     "0.05",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 60,
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseError,
+		},
+		//Test case for no lifetimeHours & EndTime
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testapp",
+						User:              "admin",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 60,
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseError,
+		},
+		//Test case for incorrect gate URL
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmxx.net/",
+						Application:       "testapp",
+						User:              "admin",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 60,
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseError,
+		},
+		//Test case for no user given
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testapp",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						Threshold: v1alpha1.OPSMXThreshold{
+							Pass:     80,
+							Marginal: 60,
+						},
+					},
+				},
+			},
+			expectedPhase: v1alpha1.AnalysisPhaseError,
+		},
+		//Test case for endTime earlier than start time
+		{
+			metric: v1alpha1.Metric{
+				Name: "testapp",
+				Provider: v1alpha1.MetricProvider{
+					OPSMX: &v1alpha1.OPSMXMetric{
+						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+						Application:       "testapp",
+						BaselineStartTime: "2022-08-02T13:15:00Z",
+						CanaryStartTime:   "2022-08-02T13:15:00Z",
+						EndTime:           "2022-08-02T12:45:00Z",
 						Threshold: v1alpha1.OPSMXThreshold{
 							Pass:     80,
 							Marginal: 60,

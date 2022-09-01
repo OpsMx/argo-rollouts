@@ -17,8 +17,6 @@ import (
 
 	"errors"
 
-	//"github.com/argoproj/argo-rollouts/pkg/apiclient/rollout"
-	//"github.com/argoproj/argo-rollouts/pkg/kubectl-argo-rollouts/info"
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	metricutil "github.com/argoproj/argo-rollouts/utils/metric"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
@@ -49,11 +47,6 @@ func roundFloat(val float64, precision uint) float64 {
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(val*ratio) / ratio
 }
-
-/*func getRevisionVersion() int64{
-	info.Revisions()
-	return
-}*/
 
 func makeRequest(requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
@@ -299,14 +292,11 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		err = errors.New("invalid Response")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
 	reportUrl = fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
-
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
-
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -344,7 +334,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(data, &status)
 	a, _ := json.MarshalIndent(status["status"], "", "   ")
 	json.Unmarshal(a, &status)
-	fmt.Printf("%v", status)
 
 	//return the measurement if the status is Running, to be resumed at resumeTime
 	if status["status"] == completeStatus {
