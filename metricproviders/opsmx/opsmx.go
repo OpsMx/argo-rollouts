@@ -24,23 +24,61 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ProviderType                          = "opsmx"
+	configIdLookupURLFormat               = `%s/autopilot/api/v3/registerCanary`
+	scoreUrlFormat                        = `%s/autopilot/canaries/%s`
+	reportUrlFormat                       = `%sui/application/deploymentverification/%s/%s`
+	resumeAfter                           = 3 * time.Second
+	httpConnectionTimeout   time.Duration = 15 * time.Second
+	internalFormat                        = `%s":{serviceGate:%s,%s:%s}`
+)
+
 type Provider struct {
 	logCtx log.Entry
 	client http.Client
 }
 
+type jobPayload struct {
+	Application       string              `json:"application"`
+	CanaryConfig      canaryConfig        `json:"canaryConfig"`
+	CanaryDeployments []canaryDeployments `json:"canaryDeployments"`
+}
+
+type canaryConfig struct {
+	LifetimeHours            string                   `json:"lifetimeHours"`
+	CanaryHealthCheckHandler canaryHealthCheckHandler `json:"canaryHealthCheckHandler"`
+	CanarySuccessCriteria    canarySuccessCriteria    `json:"canarySuccessCriteria"`
+}
+
+type canaryHealthCheckHandler struct {
+	MinimumCanaryResultScore string `json:"minimumCanaryResultScore"`
+}
+
+type canarySuccessCriteria struct {
+	CanaryResultScore string `json:"canaryResultScore"`
+}
+
+type canaryDeployments struct {
+	CanaryStartTimeMs   string     `json:"canaryStartTimeMs"`
+	BaselineStartTimeMs string     `json:"baselineStartTimeMs"`
+	Canary              *logMetric `json:"canary,omitempty"`
+	Baseline            *logMetric `json:"baseline,omitempty"`
+}
+
+type logMetric struct {
+	Log    string `json:"log,omitempty"`
+	Metric string `json:"metric,omitempty"`
+}
+
 // Type indicates provider is a OPSMX provider
-func (p *Provider) Type() string {
+func (*Provider) Type() string {
 	return ProviderType
 }
 
 // GetMetadata returns any additional metadata which needs to be stored & displayed as part of the metrics result.
-func (p *Provider) GetMetadata(metric v1alpha1.Metric) map[string]string {
+func (*Provider) GetMetadata(metric v1alpha1.Metric) map[string]string {
 	return nil
-}
-
-func isNil(i interface{}) bool {
-	return i == nil
 }
 
 func roundFloat(val float64, precision uint) float64 {
@@ -58,127 +96,93 @@ func makeRequest(requestType string, url string, body string, user string) ([]by
 	)
 
 	if err != nil {
-		return []byte{0}, err
+		return []byte{}, err
 	}
 
 	// add a request header
-	req.Header.Add("x-spinnaker-user", user)
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("x-spinnaker-user", user)
+	req.Header.Set("Content-Type", "application/json")
 
 	// send an HTTP using `req` object
 	res, err := http.DefaultClient.Do(req)
 	// check for response error
 	if err != nil {
-		return []byte{0}, err
+		return []byte{}, err
 	}
+	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
 	if err != nil {
-		return []byte{0}, err
+		return []byte{}, err
 	}
 	return data, err
 }
 
-func getServicePayload(metric v1alpha1.Metric) (string, error) {
+func getServicePayload(metric v1alpha1.Metric) (string, string, string, string, error) {
 
 	var (
 		baselinelog    string
 		canarylog      string
 		baselinemetric string
 		canarymetric   string
-
-		ServiceJobPayload     string
-		baselinemetricPayload string
-		canarymetricPayload   string
-		baselinelogPayload    string
-		canarylogPayload      string
-		baselinePayload       string
-		canaryPayload         string
-
-		err error
 	)
 
 	for _, item := range metric.Provider.OPSMX.Services {
 		if item.LogScopeVariables != "" {
 			if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
-				err = errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
-				return "", err
+				err := errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
+				return "", "", "", "", err
 			}
 			if baselinelog == "" {
 				baselinelog = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.BaselineLogScope)
 				canarylog = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.CanaryLogScope)
 			} else {
 				temp := fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.BaselineLogScope)
-				baselinelog = fmt.Sprintf("%s\n,\n%s", baselinelog, temp)
+				baselinelog = fmt.Sprintf("%s,%s", baselinelog, temp)
 				temp = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.CanaryLogScope)
-				canarylog = fmt.Sprintf("%s\n,\n%s", canarylog, temp)
+				canarylog = fmt.Sprintf("%s,%s", canarylog, temp)
 			}
 		}
 		if item.MetricScopeVariables != "" {
 			if len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.BaselineMetricScope, ",")) || len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.CanaryMetricScope, ",")) {
-				err = errors.New("mismatch in amount of metric scope variables and baseline/canary metric scope")
-				return "", err
+				err := errors.New("mismatch in amount of metric scope variables and baseline/canary metric scope")
+				return "", "", "", "", err
 			}
 			if baselinemetric == "" {
 				baselinemetric = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.BaselineMetricScope)
 				canarymetric = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.CanaryMetricScope)
 			} else {
 				temp := fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.BaselineMetricScope)
-				baselinemetric = fmt.Sprintf("%s\n,\n%s", baselinemetric, temp)
+				baselinemetric = fmt.Sprintf("%s,%s", baselinemetric, temp)
 				temp = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.CanaryMetricScope)
-				canarymetric = fmt.Sprintf("%s\n,\n%s", canarymetric, temp)
+				canarymetric = fmt.Sprintf("%s,%s", canarymetric, temp)
 			}
 		}
 	}
-
-	if baselinelog != "" {
-		baselinelogPayload = fmt.Sprintf(logPayloadFormat, baselinelog)
-		canarylogPayload = fmt.Sprintf(logPayloadFormat, canarylog)
+	if baselinelog == "" && baselinemetric == "" {
+		err := errors.New("either provide log or metric arguments")
+		return "", "", "", "", err
 	}
-
-	if baselinemetric != "" {
-		baselinemetricPayload = fmt.Sprintf(metricPayloadFormat, baselinemetric)
-		canarymetricPayload = fmt.Sprintf(metricPayloadFormat, canarymetric)
-	}
-
-	if baselinelogPayload == "" && baselinemetricPayload == "" {
-		err = errors.New("either provide log or metric arguments")
-		return "", err
-	}
-
-	if baselinelogPayload != "" && baselinemetricPayload != "" {
-		baselinePayload = fmt.Sprintf("%s,\n%s", baselinelogPayload, baselinemetricPayload)
-		canaryPayload = fmt.Sprintf("%s,\n%s", canarylogPayload, canarymetricPayload)
-		ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canaryPayload, baselinePayload)
-	} else {
-		if baselinelogPayload != "" && baselinemetricPayload == "" {
-			ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canarylogPayload, baselinelogPayload)
-		} else {
-			ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canarymetricPayload, baselinemetricPayload)
-		}
-	}
-	return ServiceJobPayload, err
+	return baselinelog, canarylog, baselinemetric, canarymetric, nil
 }
 
-func basicChecks(metric v1alpha1.Metric) string {
+func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.CanaryStartTime == "" && metric.Provider.OPSMX.BaselineStartTime == "" && metric.Provider.OPSMX.LifetimeHours == "" {
-		return "either provide lifetimehours or start time"
+		return errors.New("either provide lifetimehours or start time")
 	}
 	if metric.Provider.OPSMX.Threshold.Pass <= metric.Provider.OPSMX.Threshold.Marginal {
-		return "pass score cannot be less than marginal score"
+		return errors.New("pass score cannot be less than marginal score")
 	}
 	if metric.Provider.OPSMX.LifetimeHours == "" && metric.Provider.OPSMX.EndTime == "" {
-		return "either provide lifetimehours or end time"
+		return errors.New("either provide lifetimehours or end time")
 	}
-	return ""
+	return nil
 }
 
 func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, lifetimeHours string) (string, string, string, error) {
+
 	var canaryStartTime string
 	var baselineStartTime string
-	var err error
 
 	if (CanaryTime == "" && BaselineTime != "") || (CanaryTime != "" && BaselineTime == "") {
 		if CanaryTime == "" {
@@ -217,82 +221,122 @@ func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, li
 		lifetimeHours = fmt.Sprintf("%v", roundFloat(min.Minutes()/60, 1))
 	}
 
-	return canaryStartTime, baselineStartTime, lifetimeHours, err
+	return canaryStartTime, baselineStartTime, lifetimeHours, nil
 }
 
 // Run queries opsmx for the metric
 func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alpha1.Measurement {
-
-	var (
-		err               error
-		canaryStartTime   string
-		baselineStartTime string
-		lifetimeHours     string
-		configIdLookupURL string
-		jobPayload        string
-		reportUrl         string
-
-		canaryId string
-
-		canary map[string]interface{}
-	)
-
 	startTime := timeutil.MetaNow()
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
 
-	configIdLookupURL = fmt.Sprintf(configIdLookupURLFormat, metric.Provider.OPSMX.GateUrl)
+	configIdLookupURL := fmt.Sprintf(configIdLookupURLFormat, metric.Provider.OPSMX.GateUrl)
 
-	errString := basicChecks(metric)
-	if errString != "" {
-		err := errors.New(errString)
+	if err := basicChecks(metric); err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	canaryStartTime, baselineStartTime, lifetimeHours, err = getTimeVariables(metric.Provider.OPSMX.BaselineStartTime, metric.Provider.OPSMX.CanaryStartTime, metric.Provider.OPSMX.EndTime, metric.Provider.OPSMX.LifetimeHours)
+
+	canaryStartTime, baselineStartTime, lifetimeHours, err := getTimeVariables(metric.Provider.OPSMX.BaselineStartTime, metric.Provider.OPSMX.CanaryStartTime, metric.Provider.OPSMX.EndTime, metric.Provider.OPSMX.LifetimeHours)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	if metric.Provider.OPSMX.Services == nil {
-		jobPayload = fmt.Sprintf(DefaultjobPayloadFormat, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime) //Make the payload
-	} else {
-		ServiceJobPayload, err := getServicePayload(metric)
+
+	var (
+		payload        jobPayload
+		baselinelog    string
+		canarylog      string
+		baselinemetric string
+		canarymetric   string
+	)
+	payload.Application = metric.Provider.OPSMX.Application
+	payload.CanaryConfig.CanaryHealthCheckHandler.MinimumCanaryResultScore = fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal)
+	payload.CanaryConfig.CanarySuccessCriteria.CanaryResultScore = fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass)
+	payload.CanaryConfig.LifetimeHours = lifetimeHours
+	payload.CanaryDeployments = make([]canaryDeployments, 0)
+
+	if metric.Provider.OPSMX.Services != nil {
+		baselinelog, canarylog, baselinemetric, canarymetric, err = getServicePayload(metric)
 		if err != nil {
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
-		jobPayload = fmt.Sprintf(JobPayloadwServices, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime, ServiceJobPayload)
+		fmt.Printf("%s", baselinemetric)
+		if baselinelog != "" && baselinemetric != "" {
+
+			internal := canaryDeployments{
+				BaselineStartTimeMs: baselineStartTime,
+				CanaryStartTimeMs:   canaryStartTime,
+				Baseline:            &logMetric{Log: baselinelog, Metric: baselinemetric},
+				Canary:              &logMetric{Log: canarylog, Metric: canarymetric},
+			}
+			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
+		}
+		if baselinelog != "" && baselinemetric == "" {
+			internal := canaryDeployments{
+				BaselineStartTimeMs: baselineStartTime,
+				CanaryStartTimeMs:   canaryStartTime,
+				Baseline:            &logMetric{Log: baselinelog},
+				Canary:              &logMetric{Log: canarylog},
+			}
+			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
+		}
+		if baselinelog == "" && baselinemetric != "" {
+			internal := canaryDeployments{
+				BaselineStartTimeMs: baselineStartTime,
+				CanaryStartTimeMs:   canaryStartTime,
+				Baseline:            &logMetric{Metric: baselinemetric},
+				Canary:              &logMetric{Metric: canarymetric},
+			}
+			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
+
+		}
+
+	} else {
+
+		internal := canaryDeployments{
+			BaselineStartTimeMs: baselineStartTime,
+			CanaryStartTimeMs:   canaryStartTime,
+		}
+		payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
 	}
-	// create a request object
-	data, err := makeRequest("POST", configIdLookupURL, jobPayload, metric.Provider.OPSMX.User)
+	fmt.Printf("\n\n%v\n\n", payload)
+	buffer, err := json.Marshal(payload)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
-	checkvalid := json.Valid(data)
-	if checkvalid {
-		json.Unmarshal(data, &canary)
-		if isNil(canary["message"]) {
-			canaryId = fmt.Sprintf("%#v", canary["canaryId"])
-		} else {
-			str1 := fmt.Sprintf("%#v", canary["message"])
-			if len(strings.Split(str1, "message")) > 1 {
-				str1 = strings.Split(strings.Split(str1, "message")[1], ",")[0]
-				re, _ := regexp.Compile(`[^\w]`)
-				str1 = re.ReplaceAllString(str1, " ")
-				str1 = strings.TrimSpace(str1)
-				str1 = strings.ReplaceAll(str1, "   ", " ")
-				err = errors.New(str1)
-				return metricutil.MarkMeasurementError(newMeasurement, err)
-			} else {
-				err = errors.New(str1)
-				return metricutil.MarkMeasurementError(newMeasurement, err)
-			}
-		}
-	} else {
+	fmt.Printf("\n%s\n", string(buffer))
+	// create a request object
+	data, err := makeRequest("POST", configIdLookupURL, string(buffer), metric.Provider.OPSMX.User)
+	if err != nil {
+		return metricutil.MarkMeasurementError(newMeasurement, err)
+	}
+	if !json.Valid(data) {
 		err = errors.New("invalid Response")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	reportUrl = fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
+	var canaryId string
+	var canary map[string]interface{}
+
+	json.Unmarshal(data, &canary)
+	if canary["message"] == nil {
+		canaryId = fmt.Sprintf("%#v", canary["canaryId"])
+	} else {
+		str1 := fmt.Sprintf("%#v", canary["message"])
+		if len(strings.Split(str1, "message")) > 1 {
+			str1 = strings.Split(strings.Split(str1, "message")[1], ",")[0]
+			re, _ := regexp.Compile(`[^\w]`)
+			str1 = re.ReplaceAllString(str1, " ")
+			str1 = strings.TrimSpace(str1)
+			str1 = strings.ReplaceAll(str1, "   ", " ")
+			err = errors.New(str1)
+			return metricutil.MarkMeasurementError(newMeasurement, err)
+		} else {
+			err = errors.New(str1)
+			return metricutil.MarkMeasurementError(newMeasurement, err)
+		}
+	}
+	reportUrl := fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
+	fmt.Printf("\n\n%s\n\n", reportUrl)
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
@@ -301,67 +345,63 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
 	newMeasurement.Phase = v1alpha1.AnalysisPhaseRunning
-
 	return newMeasurement
 }
 
 func evaluateResult(score int, pass int, marginal int) v1alpha1.AnalysisPhase {
 	if score >= pass {
 		return v1alpha1.AnalysisPhaseSuccessful
-	} else if score < pass && score >= marginal {
-		return v1alpha1.AnalysisPhaseInconclusive
-	} else {
-		return v1alpha1.AnalysisPhaseFailed
 	}
+	if score < pass && score >= marginal {
+		return v1alpha1.AnalysisPhaseInconclusive
+	}
+	return v1alpha1.AnalysisPhaseFailed
 }
 
-func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
+func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	var (
-		canaryId    string
 		canaryScore string
-		status      map[string]interface{}
 		result      map[string]interface{}
 		finalScore  map[string]interface{}
 	)
-	canaryId = measurement.Metadata["canaryId"]
+
+	if !json.Valid(data) {
+		err := errors.New("invalid Response")
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
+	json.Unmarshal(data, &result)
+	jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
+	json.Unmarshal(jsonBytes, &finalScore)
+	if finalScore["overallScore"] == nil {
+		canaryScore = "0"
+	} else {
+		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
+	}
+	score, _ := strconv.Atoi(canaryScore)
+	measurement.Value = canaryScore
+	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
+	return measurement
+}
+
+func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
+	canaryId := measurement.Metadata["canaryId"]
 	scoreURL := fmt.Sprintf(scoreUrlFormat, metric.Provider.OPSMX.GateUrl, canaryId)
 
 	data, err := makeRequest("GET", scoreURL, "", metric.Provider.OPSMX.User)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
-
-	json.Unmarshal(data, &status)
-	a, _ := json.MarshalIndent(status["status"], "", "   ")
-	json.Unmarshal(a, &status)
-
+	var status map[string]interface{}
 	//return the measurement if the status is Running, to be resumed at resumeTime
-	if status["status"] == completeStatus {
+	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 		measurement.ResumeAt = &resumeTime
 		measurement.Phase = v1alpha1.AnalysisPhaseRunning
 
 		return measurement
+	}
 
-	}
-	//res.Body.Close()
-	checkvalid := json.Valid(data)
-	if checkvalid {
-		json.Unmarshal(data, &result)
-		jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
-		json.Unmarshal(jsonBytes, &finalScore)
-		if isNil(finalScore["overallScore"]) {
-			canaryScore = "0"
-		} else {
-			canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
-		}
-	} else {
-		err = errors.New("invalid Response")
-		return metricutil.MarkMeasurementError(measurement, err)
-	}
-	score, _ := strconv.Atoi(canaryScore)
-	measurement.Value = canaryScore
-	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
+	measurement = processResume(data, metric, measurement)
 	finishTime := timeutil.MetaNow()
 	measurement.FinishedAt = &finishTime
 	return measurement
