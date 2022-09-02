@@ -39,10 +39,6 @@ func (p *Provider) GetMetadata(metric v1alpha1.Metric) map[string]string {
 	return nil
 }
 
-func isNil(i interface{}) bool {
-	return i == nil
-}
-
 func roundFloat(val float64, precision uint) float64 {
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(val*ratio) / ratio
@@ -151,28 +147,28 @@ func getServicePayload(metric v1alpha1.Metric) (string, error) {
 	if baselinelogPayload != "" && baselinemetricPayload != "" {
 		baselinePayload = fmt.Sprintf("%s,\n%s", baselinelogPayload, baselinemetricPayload)
 		canaryPayload = fmt.Sprintf("%s,\n%s", canarylogPayload, canarymetricPayload)
-		ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canaryPayload, baselinePayload)
+		ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canaryPayload, baselinePayload)
 	} else {
 		if baselinelogPayload != "" && baselinemetricPayload == "" {
-			ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canarylogPayload, baselinelogPayload)
+			ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canarylogPayload, baselinelogPayload)
 		} else {
-			ServiceJobPayload = fmt.Sprintf(ServicesjobPayloadFormat, canarymetricPayload, baselinemetricPayload)
+			ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canarymetricPayload, baselinemetricPayload)
 		}
 	}
 	return ServiceJobPayload, err
 }
 
-func basicChecks(metric v1alpha1.Metric) string {
+func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.CanaryStartTime == "" && metric.Provider.OPSMX.BaselineStartTime == "" && metric.Provider.OPSMX.LifetimeHours == "" {
-		return "either provide lifetimehours or start time"
+		return errors.New("either provide lifetimehours or start time")
 	}
 	if metric.Provider.OPSMX.Threshold.Pass <= metric.Provider.OPSMX.Threshold.Marginal {
-		return "pass score cannot be less than marginal score"
+		return errors.New("pass score cannot be less than marginal score")
 	}
 	if metric.Provider.OPSMX.LifetimeHours == "" && metric.Provider.OPSMX.EndTime == "" {
-		return "either provide lifetimehours or end time"
+		return errors.New("either provide lifetimehours or end time")
 	}
-	return ""
+	return nil
 }
 
 func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, lifetimeHours string) (string, string, string, error) {
@@ -222,45 +218,30 @@ func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, li
 
 // Run queries opsmx for the metric
 func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alpha1.Measurement {
-
-	var (
-		err               error
-		canaryStartTime   string
-		baselineStartTime string
-		lifetimeHours     string
-		configIdLookupURL string
-		jobPayload        string
-		reportUrl         string
-
-		canaryId string
-
-		canary map[string]interface{}
-	)
-
 	startTime := timeutil.MetaNow()
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
 
-	configIdLookupURL = fmt.Sprintf(configIdLookupURLFormat, metric.Provider.OPSMX.GateUrl)
+	configIdLookupURL := fmt.Sprintf(configIdLookupURLFormat, metric.Provider.OPSMX.GateUrl)
 
-	errString := basicChecks(metric)
-	if errString != "" {
-		err := errors.New(errString)
+	if err := basicChecks(metric); err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	canaryStartTime, baselineStartTime, lifetimeHours, err = getTimeVariables(metric.Provider.OPSMX.BaselineStartTime, metric.Provider.OPSMX.CanaryStartTime, metric.Provider.OPSMX.EndTime, metric.Provider.OPSMX.LifetimeHours)
+	canaryStartTime, baselineStartTime, lifetimeHours, err := getTimeVariables(metric.Provider.OPSMX.BaselineStartTime, metric.Provider.OPSMX.CanaryStartTime, metric.Provider.OPSMX.EndTime, metric.Provider.OPSMX.LifetimeHours)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+
+	var jobPayload string
 	if metric.Provider.OPSMX.Services == nil {
-		jobPayload = fmt.Sprintf(DefaultjobPayloadFormat, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime) //Make the payload
+		jobPayload = fmt.Sprintf(defaultjobPayloadFormat, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime) //Make the payload
 	} else {
 		ServiceJobPayload, err := getServicePayload(metric)
 		if err != nil {
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
-		jobPayload = fmt.Sprintf(JobPayloadwServices, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime, ServiceJobPayload)
+		jobPayload = fmt.Sprintf(jobPayloadwServices, metric.Provider.OPSMX.Application, lifetimeHours, fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal), fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass), canaryStartTime, baselineStartTime, ServiceJobPayload)
 	}
 	// create a request object
 	data, err := makeRequest("POST", configIdLookupURL, jobPayload, metric.Provider.OPSMX.User)
@@ -268,10 +249,12 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
+	var canaryId string
+	var canary map[string]interface{}
 	checkvalid := json.Valid(data)
 	if checkvalid {
 		json.Unmarshal(data, &canary)
-		if isNil(canary["message"]) {
+		if canary["message"] == nil {
 			canaryId = fmt.Sprintf("%#v", canary["canaryId"])
 		} else {
 			str1 := fmt.Sprintf("%#v", canary["message"])
@@ -292,7 +275,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		err = errors.New("invalid Response")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	reportUrl = fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
+	reportUrl := fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
@@ -308,22 +291,20 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 func evaluateResult(score int, pass int, marginal int) v1alpha1.AnalysisPhase {
 	if score >= pass {
 		return v1alpha1.AnalysisPhaseSuccessful
-	} else if score < pass && score >= marginal {
-		return v1alpha1.AnalysisPhaseInconclusive
-	} else {
-		return v1alpha1.AnalysisPhaseFailed
 	}
+	if score < pass && score >= marginal {
+		return v1alpha1.AnalysisPhaseInconclusive
+	}
+	return v1alpha1.AnalysisPhaseFailed
 }
 
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	var (
-		canaryId    string
 		canaryScore string
-		status      map[string]interface{}
 		result      map[string]interface{}
 		finalScore  map[string]interface{}
 	)
-	canaryId = measurement.Metadata["canaryId"]
+	canaryId := measurement.Metadata["canaryId"]
 	scoreURL := fmt.Sprintf(scoreUrlFormat, metric.Provider.OPSMX.GateUrl, canaryId)
 
 	data, err := makeRequest("GET", scoreURL, "", metric.Provider.OPSMX.User)
@@ -331,33 +312,31 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
+	var status map[string]interface{}
 	json.Unmarshal(data, &status)
 	a, _ := json.MarshalIndent(status["status"], "", "   ")
 	json.Unmarshal(a, &status)
 
 	//return the measurement if the status is Running, to be resumed at resumeTime
-	if status["status"] == completeStatus {
+	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 		measurement.ResumeAt = &resumeTime
 		measurement.Phase = v1alpha1.AnalysisPhaseRunning
 
 		return measurement
-
 	}
 	//res.Body.Close()
-	checkvalid := json.Valid(data)
-	if checkvalid {
-		json.Unmarshal(data, &result)
-		jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
-		json.Unmarshal(jsonBytes, &finalScore)
-		if isNil(finalScore["overallScore"]) {
-			canaryScore = "0"
-		} else {
-			canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
-		}
-	} else {
+	if !json.Valid(data) {
 		err = errors.New("invalid Response")
 		return metricutil.MarkMeasurementError(measurement, err)
+	}
+	json.Unmarshal(data, &result)
+	jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
+	json.Unmarshal(jsonBytes, &finalScore)
+	if finalScore["overallScore"] == nil {
+		canaryScore = "0"
+	} else {
+		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 	}
 	score, _ := strconv.Atoi(canaryScore)
 	measurement.Value = canaryScore

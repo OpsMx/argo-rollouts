@@ -1,16 +1,17 @@
 package opsmx
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	ProviderType                          = "opsmx"
 	configIdLookupURLFormat               = `%s/autopilot/api/v3/registerCanary`
 	scoreUrlFormat                        = `%s/autopilot/canaries/%s`
 	reportUrlFormat                       = `%sui/application/deploymentverification/%s/%s`
-	completeStatus                        = "RUNNING"
 	resumeAfter                           = 15 * time.Second
 	httpConnectionTimeout   time.Duration = 15 * time.Second
-	DefaultjobPayloadFormat               = `{
+	defaultjobPayloadFormat               = `{
         "application": "%s",
         "canaryConfig": {
                 "lifetimeHours": %s,
@@ -28,7 +29,7 @@ const (
                     }
           ]
     }`
-	JobPayloadwServices = `{
+	jobPayloadwServices = `{
         "application": "%s",
         "canaryConfig": {
                 "lifetimeHours": %s,
@@ -48,7 +49,7 @@ const (
           ]
     }`
 
-	ServicesjobPayloadFormat = `"canary":{
+	servicesjobPayloadFormat = `"canary":{
 			%s
 		},
 		"baseline":{
@@ -65,3 +66,13 @@ const (
 		"%s": "%s"
 		}`
 )
+
+type jobPayload struct {
+	Application  string       `json:"application,omitempty"`
+	CanaryConfig canaryConfig `json:"canaryConfig,omitempty"`
+}
+
+type canaryConfig struct {
+	LifetimeHours float64 `json:"lifetimeHours,omitempty"`
+	Name          string  `json:"name,omitempty"`
+}
