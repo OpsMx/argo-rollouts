@@ -1,569 +1,1125 @@
 package opsmx
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tj/assert"
 )
 
+var successfulTests = []struct {
+	metric                v1alpha1.Metric
+	payloadRegisterCanary string
+	reportUrl             string
+}{
+	//Test case for basic function
+	{
+		metric: v1alpha1.Metric{
+			Name: "testappy",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "user1",
+					Application:       "testapp",
+					BaselineStartTime: "2022-07-29T13:15:00Z",
+					CanaryStartTime:   "2022-07-29T13:15:00Z",
+					LifetimeHours:     "0.5",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "testapp",
+			"canaryConfig": {
+					"lifetimeHours": "0.5",
+					"canaryHealthCheckHandler": {
+									"minimumCanaryResultScore": "65"
+									},
+					"canarySuccessCriteria": {
+								"canaryResultScore": "80"
+									}
+					},
+			"canaryDeployments": [
+						{
+						"canaryStartTimeMs": "1659100500000",
+						"baselineStartTimeMs": "1659100500000",
+						"baseline": {},
+						"canary": {}
+						}
+			  ]
+		}`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
+	},
+	//Test case for endTime feature
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "testapp",
+			"canaryConfig": {
+					"lifetimeHours": "0.5",
+					"canaryHealthCheckHandler": {
+									"minimumCanaryResultScore": "65"
+									},
+					"canarySuccessCriteria": {
+								"canaryResultScore": "80"
+									}
+					},
+			"canaryDeployments": [
+						{
+						"canaryStartTimeMs": "1660137300000",
+						"baselineStartTimeMs": "1660137300000",
+						"baseline": {},
+						"canary": {}
+						}
+			  ]
+		}`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
+	},
+	//Test case for only 1 time format given
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "testapp",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "testapp",
+			"canaryConfig": {
+					"lifetimeHours": "0.5",
+					"canaryHealthCheckHandler": {
+									"minimumCanaryResultScore": "65"
+									},
+					"canarySuccessCriteria": {
+								"canaryResultScore": "80"
+									}
+					},
+			"canaryDeployments": [
+						{
+						"canaryStartTimeMs": "1660137300000",
+						"baselineStartTimeMs": "1660137300000",
+						"baseline": {},
+						"canary": {}
+						}
+			  ]
+		}`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
+	},
+	//Test case for Single Service feature
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-datascience-br",
+							CanaryMetricScope:    "oes-datascience-cr",
+						},
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "multiservice",
+			"canaryConfig": {
+					"lifetimeHours": "0.5",
+					"canaryHealthCheckHandler": {
+									"minimumCanaryResultScore": "65"
+									},
+					"canarySuccessCriteria": {
+								"canaryResultScore": "80"
+									}
+					},
+			"canaryDeployments": [
+						{
+						"canaryStartTimeMs": "1660137300000",
+						"baselineStartTimeMs": "1660137300000",
+						"canary": {
+							"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-cr"}
+						  }},
+						"baseline": {
+							"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-br"}}
+						  }
+						}
+			  ]
+		}`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+	},
+	//Test case for multi-service feature
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					User:              "admin",
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+						},
+						{
+							ServiceName:          "service2",
+							GateName:             "gate2",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-platform-br",
+							CanaryMetricScope:    "oes-platform-cr",
+						},
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `		{
+			"application": "multiservice",
+			"canaryConfig": {
+			  "lifetimeHours": "0.5",
+			  "canaryHealthCheckHandler": {
+				"minimumCanaryResultScore": "65"
+			  },
+			  "canarySuccessCriteria": {
+				"canaryResultScore": "80"
+			  }
+			},
+			"canaryDeployments": [
+			  {
+				"canaryStartTimeMs": "1660137300000",
+				"baselineStartTimeMs": "1660137300000",
+				"canary": {
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-sapor-cr"
+					},
+					"service2": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-platform-cr"
+					}
+				  }
+				},
+				"baseline": {
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-sapor-br"
+					},
+					"service2": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-platform-br"
+					}
+				  }
+				}
+			  }
+			]
+		  }
+`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+	},
+
+	//Test case for multi-service feature along with logs+metrics analysis
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-platform-br",
+							CanaryMetricScope:    "oes-platform-cr",
+						},
+						{
+							ServiceName:          "service2",
+							GateName:             "gate2",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							LogScopeVariables:    "kubernetes.container_name",
+							BaselineLogScope:     "oes-datascience-br",
+							CanaryLogScope:       "oes-datascience-cr",
+						},
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "multiservice",
+			"canaryConfig": {
+			  "lifetimeHours": "0.5",
+			  "canaryHealthCheckHandler": {
+				"minimumCanaryResultScore": "65"
+			  },
+			  "canarySuccessCriteria": {
+				"canaryResultScore": "80"
+			  }
+			},
+			"canaryDeployments": [
+			  {
+				"canaryStartTimeMs": "1660137300000",
+				"baselineStartTimeMs": "1660137300000",
+				"canary": {
+				  "log": {
+					"service2": {
+					  "serviceGate": "gate2",
+					  "kubernetes.container_name": "oes-datascience-cr"
+					}
+				  },
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-platform-cr"
+					},
+					"service2": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-sapor-cr"
+					}
+				  }
+				},
+				"baseline": {
+				  "log": {
+					"service2": {
+					  "serviceGate": "gate2",
+					  "kubernetes.container_name": "oes-datascience-br"
+					}
+				  },
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-platform-br"
+					},
+					"service2": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-sapor-br"
+					}
+				  }
+				}
+			  }
+			]
+		  }`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+	},
+	//Test case for 1 incorrect service and one correct
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-platform-br",
+							CanaryMetricScope:    "oes-platform-cr",
+						},
+						{
+							ServiceName:          "service3",
+							GateName:             "gate2",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							LogScopeVariables:    "kubernetes.container_name",
+							BaselineLogScope:     "oes-datascience-br",
+							CanaryLogScope:       "oes-datascience-cr",
+						},
+					},
+				},
+			},
+		},
+		payloadRegisterCanary: `{
+			"application": "multiservice",
+			"canaryConfig": {
+			  "lifetimeHours": "0.5",
+			  "canaryHealthCheckHandler": {
+				"minimumCanaryResultScore": "65"
+			  },
+			  "canarySuccessCriteria": {
+				"canaryResultScore": "80"
+			  }
+			},
+			"canaryDeployments": [
+			  {
+				"canaryStartTimeMs": "1660137300000",
+				"baselineStartTimeMs": "1660137300000",
+				"canary": {
+				  "log": {
+					"service3": {
+					  "serviceGate": "gate2",
+					  "kubernetes.container_name": "oes-datascience-cr"
+					}
+				  },
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-platform-cr"
+					},
+					"service3": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-sapor-cr"
+					}
+				  }
+				},
+				"baseline": {
+				  "log": {
+					"service3": {
+					  "serviceGate": "gate2",
+					  "kubernetes.container_name": "oes-datascience-br"
+					}
+				  },
+				  "metric": {
+					"service1": {
+					  "serviceGate": "gate1",
+					  "job_name": "oes-platform-br"
+					},
+					"service3": {
+					  "serviceGate": "gate2",
+					  "job_name": "oes-sapor-br"
+					}
+				  }
+				}
+			  }
+			]
+		  }`,
+		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+	},
+}
+
+var negativeTests = []struct {
+	metric        v1alpha1.Metric
+	expectedPhase v1alpha1.AnalysisPhase
+	message       string
+}{
+
+	//Test case for no logs and metric analysis given while service was given
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName: "service1",
+							GateName:    "gate1",
+						},
+					},
+				},
+			},
+		},
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "at least one of log or metric context must be included",
+	},
+	//Test case for no lifetimeHours, Baseline/Canary start time
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:     "https://opsmx.test.tst",
+					Application: "testapp",
+					User:        "admin",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+				},
+			},
+		},
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "either provide lifetimehours or start time",
+	},
+	//Test case for Pass score less than marginal
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					User:              "admin",
+					BaselineStartTime: "2022-08-02T13:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeHours:     "0.05",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     60,
+						Marginal: 80,
+					},
+				},
+			},
+		},
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "pass score cannot be less than marginal score",
+	},
+	//Test case for inappropriate time format
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					User:              "admin",
+					BaselineStartTime: "2022-08-02T13:15:00Z",
+					CanaryStartTime:   "2022-O8-02T13:15:00Z",
+					LifetimeHours:     "0.05",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+				},
+			},
+		},
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "parsing time \"2022-O8-02T13:15:00Z\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"O8-02T13:15:00Z\" as \"01\"",
+	},
+	//Test case for no lifetimeHours & EndTime
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					User:              "admin",
+					BaselineStartTime: "2022-08-02T13:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+				},
+			},
+		},
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "either provide lifetimehours or end time",
+	},
+	//Test case for mismatch in log scope variables and baseline/canary log scope
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-platform-br",
+							CanaryMetricScope:    "oes-platform-cr",
+						},
+						{
+							ServiceName:          "service2",
+							GateName:             "gate2",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							LogScopeVariables:    "kubernetes.container_name,kubernetes.pod",
+							BaselineLogScope:     "oes-datascience-br",
+							CanaryLogScope:       "oes-datascience-cr",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "mismatch in amount of log scope variables and baseline/canary log scope",
+	},
+
+	//Test case for mismatch in metric scope variables and baseline/canary metric scope
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					User:              "admin",
+					Application:       "multiservice",
+					BaselineStartTime: "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
+					EndTime:           "2022-08-10T13:45:10Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 65,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							ServiceName:          "service1",
+							GateName:             "gate1",
+							MetricScopeVariables: "job_name,job123",
+							BaselineMetricScope:  "oes-platform-br",
+							CanaryMetricScope:    "oes-platform-cr",
+						},
+						{
+							ServiceName:          "service2",
+							GateName:             "gate2",
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							LogScopeVariables:    "kubernetes.container_name",
+							BaselineLogScope:     "oes-datascience-br",
+							CanaryLogScope:       "oes-datascience-cr",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "mismatch in amount of metric scope variables and baseline/canary metric scope",
+	},
+}
+
 const (
-	httpConnectionTestTimeout time.Duration = 15 * time.Second
+	endpointRegisterCanary    = "https://opsmx.test.tst/autopilot/api/v3/registerCanary"
+	endpointCheckCanaryStatus = "https://opsmx.test.tst/autopilot/canaries/1424"
 )
 
-func TestRunSuccessfully(t *testing.T) {
+func TestRunSucessCases(t *testing.T) {
 	// Test Cases
-	var tests = []struct {
-		metric        v1alpha1.Metric
-		expectedPhase v1alpha1.AnalysisPhase
-		expectedValue string
-	}{
-		//Test case for basic function
-		{
-			metric: v1alpha1.Metric{
-				Name: "testappy",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "user1",
-						Application:       "testapp",
-						BaselineStartTime: "2022-07-29T13:15:00Z",
-						CanaryStartTime:   "2022-07-29T13:15:00Z",
-						LifetimeHours:     "0.5",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for endTime feature
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "testapp",
-						BaselineStartTime: "2022-08-10T13:15:00Z",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for only 1 time format given
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "testapp",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for Single Service feature
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service1",
-								GateName:             "gate1",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-datascience-br",
-								CanaryMetricScope:    "oes-datascience-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for multi-service feature
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						User:              "admin",
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service1",
-								GateName:             "gate1",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-sapor-br",
-								CanaryMetricScope:    "oes-sapor-cr",
-							},
-							{
-								ServiceName:          "service2",
-								GateName:             "gate2",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-platform-br",
-								CanaryMetricScope:    "oes-platform-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for multi-service feature along with logs+metrics analysis
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service1",
-								GateName:             "gate1",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-platform-br",
-								CanaryMetricScope:    "oes-platform-cr",
-							},
-							{
-								ServiceName:          "service2",
-								GateName:             "gate2",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-sapor-br",
-								CanaryMetricScope:    "oes-sapor-cr",
-								LogScopeVariables:    "kubernetes.container_name",
-								BaselineLogScope:     "oes-datascience-br",
-								CanaryLogScope:       "oes-datascience-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-		//Test case for 1 incorrect service and one correct
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service1",
-								GateName:             "gate1",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-platform-br",
-								CanaryMetricScope:    "oes-platform-cr",
-							},
-							{
-								ServiceName:          "service3",
-								GateName:             "gate2",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-sapor-br",
-								CanaryMetricScope:    "oes-sapor-cr",
-								LogScopeVariables:    "kubernetes.container_name",
-								BaselineLogScope:     "oes-datascience-br",
-								CanaryLogScope:       "oes-datascience-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedValue: "100",
-			expectedPhase: v1alpha1.AnalysisPhaseSuccessful,
-		},
-	}
-	for _, test := range tests {
+	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
-		c := NewTestHttpClient()
+		c := NewTestClient(func(req *http.Request) *http.Response {
+			assert.Equal(t, req.URL.String(), endpointRegisterCanary)
+
+			body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				panic(err)
+			}
+			bodyI := map[string]interface{}{}
+			err = json.Unmarshal(body, &bodyI)
+			if err != nil {
+				panic(err)
+			}
+			expectedBodyI := map[string]interface{}{}
+			err = json.Unmarshal([]byte(test.payloadRegisterCanary), &expectedBodyI)
+			if err != nil {
+				panic(err)
+			}
+			assert.Equal(t, expectedBodyI, bodyI)
+			return &http.Response{
+				StatusCode: 200,
+				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+					"canaryId": 1424
+				}
+				`)),
+				// Must be set to non-nil value or it panics
+				Header: make(http.Header),
+			}
+		})
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
-		time.Sleep(resumeAfter)
-		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
-		// Phase specific cases
-		switch test.expectedPhase {
-		case v1alpha1.AnalysisPhaseSuccessful:
-			assert.NotNil(t, measurement.StartedAt)
-			assert.Equal(t, test.expectedValue, measurement.Value)
-			assert.Equal(t, test.expectedPhase, measurement.Phase)
-			assert.NotNil(t, measurement.FinishedAt)
-		case v1alpha1.AnalysisPhaseFailed:
-			assert.NotNil(t, measurement.StartedAt)
-			assert.Equal(t, test.expectedPhase, measurement.Phase)
-			assert.NotNil(t, measurement.FinishedAt)
-		}
+		assert.NotNil(t, measurement.StartedAt)
+		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
+		assert.Equal(t, fmt.Sprintf("Report Url: %s", test.reportUrl), measurement.Metadata["reportUrl"])
+		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 	}
-	var testing = []struct {
-		metric        v1alpha1.Metric
-		expectedPhase v1alpha1.AnalysisPhase
-	}{
-		//Test case for Now feature
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:       "https://ds312.isd-dev.opsmx.net/",
-						User:          "admin",
-						Application:   "testapp",
-						LifetimeHours: "0.05",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-					},
-				},
-			},
-		},
-		//Test Case for No logs configured still passed in service
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "multiservice",
-						User:              "admin",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service1",
-								GateName:             "gate1",
-								LogScopeVariables:    "kubernetes.container_name",
-								BaselineLogScope:     "oes-datascience-br",
-								CanaryLogScope:       "oes-datascience-cr",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-sapor-br",
-								CanaryMetricScope:    "oes-sapor-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for incorrect service name
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName:          "service3",
-								GateName:             "gate1",
-								MetricScopeVariables: "job_name",
-								BaselineMetricScope:  "oes-datascience-br",
-								CanaryMetricScope:    "oes-datascience-cr",
-							},
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseFailed,
-		},
-		//Test case for no logs and metric analysis given while service was given
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						User:              "admin",
-						Application:       "multiservice",
-						BaselineStartTime: "",
-						CanaryStartTime:   "2022-08-10T13:15:00Z",
-						EndTime:           "2022-08-10T13:45:10Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-						Services: []v1alpha1.OPSMXService{
-							{
-								ServiceName: "service1",
-								GateName:    "gate1",
-							},
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for no lifetimeHours, Baseline/Canary start time
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:     "https://ds312.isd-dev.opsmx.net/",
-						Application: "testapp",
-						User:        "admin",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 65,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for Pass score less than marginal
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testapp",
-						User:              "admin",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						LifetimeHours:     "0.05",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     60,
-							Marginal: 80,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for inappropriate time format
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testapp",
-						User:              "admin",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-O8-02T13:15:00Z",
-						LifetimeHours:     "0.05",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for incorrect application name
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testap",
-						User:              "admin",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						LifetimeHours:     "0.05",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for no lifetimeHours & EndTime
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testapp",
-						User:              "admin",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for incorrect gate URL
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmxx.net/",
-						Application:       "testapp",
-						User:              "admin",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for no user given
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testapp",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-		//Test case for endTime earlier than start time
-		{
-			metric: v1alpha1.Metric{
-				Name: "testapp",
-				Provider: v1alpha1.MetricProvider{
-					OPSMX: &v1alpha1.OPSMXMetric{
-						GateUrl:           "https://ds312.isd-dev.opsmx.net/",
-						Application:       "testapp",
-						BaselineStartTime: "2022-08-02T13:15:00Z",
-						CanaryStartTime:   "2022-08-02T13:15:00Z",
-						EndTime:           "2022-08-02T12:45:00Z",
-						Threshold: v1alpha1.OPSMXThreshold{
-							Pass:     80,
-							Marginal: 60,
-						},
-					},
-				},
-			},
-			expectedPhase: v1alpha1.AnalysisPhaseError,
-		},
-	}
-	for _, test := range testing {
+}
+
+func TestResumeSucessCases(t *testing.T) {
+
+	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
-		c := NewTestHttpClient()
+		c := NewTestClient(func(req *http.Request) *http.Response {
+			assert.Equal(t, req.URL.String(), endpointCheckCanaryStatus)
+
+			return &http.Response{
+				StatusCode: 200,
+				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+					"owner": "admin",
+					"application": "testapp",
+					"canaryResult": {
+						"duration": "0 seconds",
+						"lastUpdated": "2022-09-02 10:02:18.504",
+						"canaryReportURL": "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
+						"overallScore": 100,
+						"overallResult": "HEALTHY",
+						"message": "Canary Is HEALTHY",
+						"errors": []
+					},
+					"launchedDate": "2022-09-02 10:02:18.504",
+					"canaryConfig": {
+						"combinedCanaryResultStrategy": "LOWEST",
+						"minimumCanaryResultScore": 65.0,
+						"name": "admin",
+						"lifetimeMinutes": 30,
+						"canaryAnalysisIntervalMins": 30,
+						"maximumCanaryResultScore": 80.0
+					},
+					"id": "1424",
+					"services": [],
+					"status": {
+						"complete": false,
+						"status": "COMPLETED"
+					}}
+				`)),
+				// Must be set to non-nil value or it panics
+				Header: make(http.Header),
+			}
+		})
+
 		provider := NewOPSMXProvider(*e, c)
-		measurement := provider.Run(newAnalysisRun(), test.metric)
-		time.Sleep(resumeAfter)
-		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
-		// Phase specific cases
-		switch test.expectedPhase {
-		case v1alpha1.AnalysisPhaseSuccessful:
-			assert.NotNil(t, measurement.StartedAt)
-			assert.NotNil(t, measurement.FinishedAt)
-		case v1alpha1.AnalysisPhaseFailed:
-			assert.NotNil(t, measurement.StartedAt)
-			assert.Equal(t, test.expectedPhase, measurement.Phase)
-			assert.NotNil(t, measurement.FinishedAt)
-		case v1alpha1.AnalysisPhaseError:
-			assert.NotNil(t, measurement.StartedAt)
-			assert.Equal(t, test.expectedPhase, measurement.Phase)
-			assert.NotNil(t, measurement.FinishedAt)
+
+		mapMetadata := make(map[string]string)
+		mapMetadata["canaryId"] = "1424"
+		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
+
+		measurement := v1alpha1.Measurement{
+			Metadata: mapMetadata,
+			Phase:    v1alpha1.AnalysisPhaseRunning,
 		}
+		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
+		assert.Equal(t, "100", measurement.Value)
+		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, v1alpha1.AnalysisPhaseSuccessful, measurement.Phase)
+	}
+}
+
+func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
+
+		return &http.Response{
+			StatusCode: 404,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			{
+				"timestamp": 1.662356583464E12,
+				"status": 404.0,
+				"error": "Not Found",
+				"message": "Log template not configured for a service : service1",
+				"path": "/autopilot/api/v3/registerCanary"
+			}
+			`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "multiservice",
+				User:              "admin",
+				BaselineStartTime: "",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				EndTime:           "2022-08-10T13:45:10Z",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						ServiceName:          "service1",
+						GateName:             "gate1",
+						LogScopeVariables:    "kubernetes.container_name",
+						BaselineLogScope:     "oes-datascience-br",
+						CanaryLogScope:       "oes-datascience-cr",
+						MetricScopeVariables: "job_name",
+						BaselineMetricScope:  "oes-sapor-br",
+						CanaryMetricScope:    "oes-sapor-cr",
+					},
+				},
+			},
+		},
 	}
 
+	provider := NewOPSMXProvider(*e, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "Not Found", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+
+}
+
+// Change the message after the discussion on message parsing
+func TestIncorrectApplicationName(t *testing.T) {
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
+
+		return &http.Response{
+			StatusCode: 500,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			{
+				"timestamp": 1662442034995,
+				"status": 500,
+				"error": "Internal Server Error",
+				"exception": "feign.FeignException$NotFound",
+				"message": "Application not found with name testap"
+			}
+			`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "testap",
+				User:              "admin",
+				BaselineStartTime: "2022-08-02T13:15:00Z",
+				CanaryStartTime:   "2022-08-02T13:15:00Z",
+				LifetimeHours:     "0.05",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 60,
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "Internal Server Error", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+
+}
+
+func TestIncorrectGateURL(t *testing.T) {
+	t.Skip("Skipping the test case, as this scenario is being reworked on")
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 400,
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.invalidurl.tst",
+				Application:       "testap",
+				User:              "admin",
+				BaselineStartTime: "2022-08-02T13:15:00Z",
+				CanaryStartTime:   "2022-08-02T13:15:00Z",
+				LifetimeHours:     "0.05",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 60,
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "invalid Response", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+
+}
+
+func TestNoUserDefined(t *testing.T) {
+	t.Skip("Skipping the test case, as this scenario is being reworked on")
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 400,
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "testapp",
+				BaselineStartTime: "2022-08-02T13:15:00Z",
+				CanaryStartTime:   "2022-08-02T13:15:00Z",
+				LifetimeHours:     "0.05",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 60,
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	fmt.Println(measurement)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+
+}
+
+func TestEndTimeBeforeStartTime(t *testing.T) {
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
+
+		return &http.Response{
+			StatusCode: 500,
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "testapp",
+				BaselineStartTime: "2022-08-02T13:15:00Z",
+				CanaryStartTime:   "2022-08-02T13:15:00Z",
+				EndTime:           "2022-08-02T12:45:00Z",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 60,
+				},
+			},
+		},
+	}
+
+	provider := NewOPSMXProvider(*e, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "start time cannot be greater than end time", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+
+}
+
+func TestIncorrectServiceName(t *testing.T) {
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) *http.Response {
+		assert.Equal(t, req.URL.String(), endpointCheckCanaryStatus)
+
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+					"owner": "admin",
+					"application": "multiservice",
+					"canaryResult": {
+						"duration": "0 seconds",
+						"lastUpdated": "2022-09-06 09:16:51.58",
+						"canaryReportURL": "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+						"overallScore": null,
+						"overallResult": "HEALTHY",
+						"message": "Canary Is HEALTHY",
+						"errors": []
+					},
+					"launchedDate": "2022-09-06 09:16:51.539",
+					"canaryConfig": {
+						"combinedCanaryResultStrategy": "LOWEST",
+						"minimumCanaryResultScore": 65.0,
+						"name": "admin",
+						"lifetimeMinutes": 30,
+						"canaryAnalysisIntervalMins": 30,
+						"maximumCanaryResultScore": 80.0
+					},
+					"id": "1424",
+					"services": [],
+					"status": {
+						"complete": true,
+						"status": "COMPLETED"
+					}
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst/",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				EndTime:           "2022-08-10T13:45:10Z",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						ServiceName:          "service3",
+						GateName:             "gate1",
+						MetricScopeVariables: "job_name",
+						BaselineMetricScope:  "oes-datascience-br",
+						CanaryMetricScope:    "oes-datascience-cr",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, c)
+
+	mapMetadata := make(map[string]string)
+	mapMetadata["canaryId"] = "1424"
+	mapMetadata["reportUrl"] = "Report Url: https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424"
+
+	measurement := v1alpha1.Measurement{
+		Metadata: mapMetadata,
+		Phase:    v1alpha1.AnalysisPhaseRunning,
+	}
+	measurement = provider.Resume(newAnalysisRun(), metric, measurement)
+	assert.NotEqual(t, "100", measurement.Value)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseFailed, measurement.Phase)
+}
+
+func TestGenericNegativeTestsRun(t *testing.T) {
+	for _, test := range negativeTests {
+		e := log.NewEntry(log.New())
+		c := NewTestClient(func(req *http.Request) *http.Response {
+			assert.Equal(t, req.URL.String(), endpointRegisterCanary)
+			return &http.Response{
+				StatusCode: 200,
+				// Send response to be tested
+				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+				// Must be set to non-nil value or it panics
+				Header: make(http.Header),
+			}
+		})
+		provider := NewOPSMXProvider(*e, c)
+		measurement := provider.Run(newAnalysisRun(), test.metric)
+		assert.NotNil(t, measurement.StartedAt)
+		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, test.message, measurement.Message)
+		assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+	}
 }
 
 func newAnalysisRun() *v1alpha1.AnalysisRun {
 	return &v1alpha1.AnalysisRun{}
 }
 
-func NewTestHttpClient() http.Client {
-	c := http.Client{
-		Timeout: httpConnectionTestTimeout,
+// RoundTripFunc .
+type RoundTripFunc func(req *http.Request) *http.Response
+
+// RoundTrip .
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+// NewTestClient returns *http.Client with Transport replaced to avoid making real calls
+func NewTestClient(fn RoundTripFunc) http.Client {
+	return http.Client{
+		Transport: fn,
 	}
-	return c
 }
