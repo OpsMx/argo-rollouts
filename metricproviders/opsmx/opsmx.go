@@ -250,7 +250,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 			if item.MetricScopeVariables != "" {
 				if len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.BaselineMetricScope, ",")) || len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.CanaryMetricScope, ",")) {
-					err := errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
+					err := errors.New("mismatch in amount of metric scope variables and baseline/canary metric scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
 
@@ -290,8 +290,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	type canaryResponse struct {
-		Error    string `json:"error,omitempty"`
-		CanaryId string `json:"canaryId,omitempty"`
+		Error    string      `json:"error,omitempty"`
+		CanaryId json.Number `json:"canaryId,omitempty"`
 	}
 	var canary canaryResponse
 
@@ -305,12 +305,14 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	urlReport.Path = path.Join(urlReport.Path, reportUrlFormat, metric.Provider.OPSMX.Application, canary.CanaryId)
+
+	stringifiedCanaryId := string(canary.CanaryId)
+	urlReport.Path = path.Join(urlReport.Path, reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
 	reportUrl := urlReport.String()
 
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
-	mapMetadata["canaryId"] = canary.CanaryId
+	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
