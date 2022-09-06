@@ -11,7 +11,6 @@ import (
 
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -218,19 +217,19 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	if metric.Provider.OPSMX.Services != nil || len(metric.Provider.OPSMX.Services) != 0 {
+		deployment := canaryDeployments{
+			BaselineStartTimeMs: baselineStartTime,
+			CanaryStartTimeMs:   canaryStartTime,
+			Baseline: logMetric{
+				Log:    map[string]map[string]string{},
+				Metric: map[string]map[string]string{},
+			},
+			Canary: logMetric{
+				Log:    map[string]map[string]string{},
+				Metric: map[string]map[string]string{},
+			},
+		}
 		for _, item := range metric.Provider.OPSMX.Services {
-			deployment := canaryDeployments{
-				BaselineStartTimeMs: baselineStartTime,
-				CanaryStartTimeMs:   canaryStartTime,
-				Baseline: logMetric{
-					Log:    map[string]map[string]string{},
-					Metric: map[string]map[string]string{},
-				},
-				Canary: logMetric{
-					Log:    map[string]map[string]string{},
-					Metric: map[string]map[string]string{},
-				},
-			}
 			valid := false
 			if item.LogScopeVariables != "" {
 				if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
@@ -270,8 +269,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				err := errors.New("at least one of log or metric context must be included")
 				return metricutil.MarkMeasurementError(newMeasurement, err)
 			}
-			payload.CanaryDeployments = append(payload.CanaryDeployments, deployment)
 		}
+		payload.CanaryDeployments = append(payload.CanaryDeployments, deployment)
 	} else {
 		internal := canaryDeployments{
 			BaselineStartTimeMs: baselineStartTime,
@@ -290,38 +289,28 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	var canaryId string
-	var canary map[string]interface{}
+	type canaryResponse struct {
+		Error    string `json:"error,omitempty"`
+		CanaryId string `json:"canaryId,omitempty"`
+	}
+	var canary canaryResponse
 
 	json.Unmarshal(data, &canary)
-	if canary["message"] == nil {
-		canaryId = fmt.Sprintf("%#v", canary["canaryId"])
-	} else {
-		str1 := fmt.Sprintf("%#v", canary["message"])
-		if len(strings.Split(str1, "message")) > 1 {
-			str1 = strings.Split(strings.Split(str1, "message")[1], ",")[0]
-			re, _ := regexp.Compile(`[^\w]`)
-			str1 = re.ReplaceAllString(str1, " ")
-			str1 = strings.TrimSpace(str1)
-			str1 = strings.ReplaceAll(str1, "   ", " ")
-			err = errors.New(str1)
-			return metricutil.MarkMeasurementError(newMeasurement, err)
-		} else {
-			err = errors.New(str1)
-			return metricutil.MarkMeasurementError(newMeasurement, err)
-		}
+	if canary.Error != "" {
+		err := errors.New(canary.Error)
+		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	
+
 	urlReport, err := url.Parse(metric.Provider.OPSMX.GateUrl)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	urlReport.Path = path.Join(urlReport.Path, reportUrlFormat, metric.Provider.OPSMX.Application, canaryId)
+	urlReport.Path = path.Join(urlReport.Path, reportUrlFormat, metric.Provider.OPSMX.Application, canary.CanaryId)
 	reportUrl := urlReport.String()
-	
+
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
-	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
+	mapMetadata["canaryId"] = canary.CanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
@@ -374,7 +363,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	}
 	urlScore.Path = path.Join(urlScore.Path, scoreUrlFormat, canaryId)
 	scoreURL := urlScore.String()
-
 
 	data, err := makeRequest(p.client, "GET", scoreURL, "", metric.Provider.OPSMX.User)
 	if err != nil {
