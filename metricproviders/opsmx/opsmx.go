@@ -186,10 +186,12 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		StartedAt: &startTime,
 	}
 
-	canaryurl, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, configIdLookupURLFormat)
+	urlCanary, err := url.Parse(metric.Provider.OPSMX.GateUrl)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+	urlCanary.Path = path.Join(urlCanary.Path, configIdLookupURLFormat)
+	canaryurl := urlCanary.String()
 
 	if err := basicChecks(metric); err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -308,10 +310,14 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
 	}
-	reportUrl, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, reportUrlFormat, metric.Provider.OPSMX.Application, canaryId)
+	
+	urlReport, err := url.Parse(metric.Provider.OPSMX.GateUrl)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+	urlReport.Path = path.Join(urlReport.Path, reportUrlFormat, metric.Provider.OPSMX.Application, canaryId)
+	reportUrl := urlReport.String()
+	
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
@@ -361,10 +367,13 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	canaryId := measurement.Metadata["canaryId"]
-	scoreURL, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, canaryId)
+	urlScore, err := url.Parse(metric.Provider.OPSMX.GateUrl)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
+	urlScore.Path = path.Join(urlScore.Path, scoreUrlFormat, canaryId)
+	scoreURL := urlScore.String()
+
 
 	data, err := makeRequest(p.client, "GET", scoreURL, "", metric.Provider.OPSMX.User)
 	if err != nil {
