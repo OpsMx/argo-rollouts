@@ -312,8 +312,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	fmt.Println(canaryId)
-	fmt.Println(reportUrl)
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = fmt.Sprintf("%v", canaryId)
@@ -355,7 +353,6 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 	} else {
 		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 	}
-	fmt.Println(finalScore)
 	score, _ := strconv.Atoi(canaryScore)
 	measurement.Value = canaryScore
 	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
