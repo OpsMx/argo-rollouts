@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"net/http"
+	"net/url"
 
 	"fmt"
 	"io/ioutil"
@@ -26,12 +27,11 @@ import (
 
 const (
 	ProviderType                          = "opsmx"
-	configIdLookupURLFormat               = `%s/autopilot/api/v3/registerCanary`
-	scoreUrlFormat                        = `%s/autopilot/canaries/%s`
-	reportUrlFormat                       = `%sui/application/deploymentverification/%s/%s`
+	configIdLookupURLFormat               = `/autopilot/api/v3/registerCanary`
+	scoreUrlFormat                        = `/autopilot/canaries/`
+	reportUrlFormat                       = `ui/application/deploymentverification/`
 	resumeAfter                           = 3 * time.Second
 	httpConnectionTimeout   time.Duration = 15 * time.Second
-	internalFormat                        = `%s":{serviceGate:%s,%s:%s}`
 )
 
 type Provider struct {
@@ -60,10 +60,10 @@ type canarySuccessCriteria struct {
 }
 
 type canaryDeployments struct {
-	CanaryStartTimeMs   string     `json:"canaryStartTimeMs"`
-	BaselineStartTimeMs string     `json:"baselineStartTimeMs"`
-	Canary              *logMetric `json:"canary,omitempty"`
-	Baseline            *logMetric `json:"baseline,omitempty"`
+	CanaryStartTimeMs   string    `json:"canaryStartTimeMs"`
+	BaselineStartTimeMs string    `json:"baselineStartTimeMs"`
+	Canary              logMetric `json:"canary,omitempty"`
+	Baseline            logMetric `json:"baseline,omitempty"`
 }
 type logMetric struct {
 	Log    map[string]map[string]string `json:"log,omitempty"`
@@ -93,7 +93,6 @@ func makeRequest(client http.Client, requestType string, url string, body string
 		url,
 		reqBody,
 	)
-
 	if err != nil {
 		return []byte{}, err
 	}
@@ -130,30 +129,31 @@ func basicChecks(metric v1alpha1.Metric) error {
 	return nil
 }
 
-func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, lifetimeHours string) (string, string, string, error) {
+func getTimeVariables(baselineTime string, canaryTime string, endTime string, lifetimeHours string) (string, string, string, error) {
 
 	var canaryStartTime string
 	var baselineStartTime string
 
-	if (CanaryTime == "" && BaselineTime != "") || (CanaryTime != "" && BaselineTime == "") {
-		if CanaryTime == "" {
-			CanaryTime = BaselineTime
+	if (canaryTime == "" && baselineTime != "") || (canaryTime != "" && baselineTime == "") {
+		if canaryTime == "" {
+			canaryTime = baselineTime
 		} else {
-			BaselineTime = CanaryTime
+			baselineTime = canaryTime
 		}
 	}
-	if CanaryTime == "" && BaselineTime == "" {
+
+	if canaryTime == "" && baselineTime == "" {
 		tm := time.Now()
 		canaryStartTime = fmt.Sprintf("%d", tm.UnixNano()/int64(time.Millisecond))
 		baselineStartTime = fmt.Sprintf("%d", tm.UnixNano()/int64(time.Millisecond))
 	} else {
-		tsStart, err := time.Parse(time.RFC3339, CanaryTime) //make a time object for canary start time
+		tsStart, err := time.Parse(time.RFC3339, canaryTime) //make a time object for canary start time
 		if err != nil {
 			return "", "", "", err
 		}
 		canaryStartTime = fmt.Sprintf("%d", tsStart.UnixNano()/int64(time.Millisecond)) //convert ISO to epoch
 
-		tsStart, err = time.Parse(time.RFC3339, BaselineTime) //make a time object for baseline start time
+		tsStart, err = time.Parse(time.RFC3339, baselineTime) //make a time object for baseline start time
 		if err != nil {
 			return "", "", "", err
 		}
@@ -162,8 +162,8 @@ func getTimeVariables(BaselineTime string, CanaryTime string, EndTime string, li
 
 	//If lifetimeHours not given
 	if lifetimeHours == "" {
-		tsStart, _ := time.Parse(time.RFC3339, CanaryTime)
-		tsEnd, err := time.Parse(time.RFC3339, EndTime)
+		tsStart, _ := time.Parse(time.RFC3339, canaryTime)
+		tsEnd, err := time.Parse(time.RFC3339, endTime)
 		if err != nil {
 			return "", "", "", err
 		}
@@ -182,7 +182,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		StartedAt: &startTime,
 	}
 
-	configIdLookupURL := fmt.Sprintf(configIdLookupURLFormat, metric.Provider.OPSMX.GateUrl)
+	canaryurl, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, configIdLookupURLFormat)
+	if err != nil {
+		return metricutil.MarkMeasurementError(newMeasurement, err)
+	}
 
 	if err := basicChecks(metric); err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -193,80 +196,76 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	var payload jobPayload
-	payload.Application = metric.Provider.OPSMX.Application
-	payload.CanaryConfig.CanaryHealthCheckHandler.MinimumCanaryResultScore = fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal)
-	payload.CanaryConfig.CanarySuccessCriteria.CanaryResultScore = fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass)
-	payload.CanaryConfig.LifetimeHours = lifetimeHours
-	payload.CanaryDeployments = make([]canaryDeployments, 0)
+	payload := jobPayload{
+		Application: metric.Provider.OPSMX.Application,
+		CanaryConfig: canaryConfig{
+			LifetimeHours: lifetimeHours,
+			CanaryHealthCheckHandler: canaryHealthCheckHandler{
+				MinimumCanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal),
+			},
+			CanarySuccessCriteria: canarySuccessCriteria{
+				CanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Pass),
+			},
+		},
+		CanaryDeployments: []canaryDeployments{},
+	}
 
-	mapServiceNameBaselineLogs := make(map[string]map[string]string, 0)
-	mapServiceNameCanaryLogs := make(map[string]map[string]string, 0)
-	mapServiceNameBaselineMetrics := make(map[string]map[string]string, 0)
-	mapServiceNameCanaryMetrics := make(map[string]map[string]string, 0)
-
-	if metric.Provider.OPSMX.Services != nil {
+	if metric.Provider.OPSMX.Services != nil || len(metric.Provider.OPSMX.Services) != 0 {
 		for _, item := range metric.Provider.OPSMX.Services {
-
+			deployment := canaryDeployments{
+				BaselineStartTimeMs: baselineStartTime,
+				CanaryStartTimeMs:   canaryStartTime,
+				Baseline: logMetric{
+					Log:    map[string]map[string]string{},
+					Metric: map[string]map[string]string{},
+				},
+				Canary: logMetric{
+					Log:    map[string]map[string]string{},
+					Metric: map[string]map[string]string{},
+				},
+			}
+			valid := false
 			if item.LogScopeVariables != "" {
 				if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
 					err := errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
 
-				mapBaseline := map[string]string{item.LogScopeVariables: item.BaselineLogScope, "serviceGate": item.GateName}
-				mapCanary := map[string]string{item.LogScopeVariables: item.CanaryLogScope, "serviceGate": item.GateName}
-
-				mapServiceNameBaselineLogs[item.ServiceName] = mapBaseline
-				mapServiceNameCanaryLogs[item.ServiceName] = mapCanary
+				deployment.Baseline.Log[item.ServiceName] = map[string]string{
+					item.LogScopeVariables: item.BaselineLogScope,
+					"serviceGate":          item.GateName,
+				}
+				deployment.Canary.Log[item.ServiceName] = map[string]string{
+					item.LogScopeVariables: item.CanaryLogScope,
+					"serviceGate":          item.GateName,
+				}
+				valid = true
 			}
 
 			if item.MetricScopeVariables != "" {
-
 				if len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.BaselineMetricScope, ",")) || len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.CanaryMetricScope, ",")) {
 					err := errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
 
-				mapBaseline := map[string]string{item.MetricScopeVariables: item.BaselineMetricScope, "serviceGate": item.GateName}
-				mapCanary := map[string]string{item.MetricScopeVariables: item.CanaryMetricScope, "serviceGate": item.GateName}
+				deployment.Baseline.Metric[item.ServiceName] = map[string]string{
+					item.MetricScopeVariables: item.BaselineMetricScope,
+					"serviceGate":             item.GateName,
+				}
+				deployment.Canary.Metric[item.ServiceName] = map[string]string{
+					item.MetricScopeVariables: item.CanaryMetricScope,
+					"serviceGate":             item.GateName,
+				}
+				valid = true
 
-				mapServiceNameBaselineMetrics[item.ServiceName] = mapBaseline
-				mapServiceNameCanaryMetrics[item.ServiceName] = mapCanary
 			}
-		}
-
-		if len(mapServiceNameBaselineLogs) != 0 && len(mapServiceNameBaselineMetrics) != 0 {
-			internal := canaryDeployments{
-				BaselineStartTimeMs: baselineStartTime,
-				CanaryStartTimeMs:   canaryStartTime,
-				Baseline:            &logMetric{Log: mapServiceNameBaselineLogs, Metric: mapServiceNameBaselineMetrics},
-				Canary:              &logMetric{Log: mapServiceNameCanaryLogs, Metric: mapServiceNameCanaryMetrics},
+			if !valid {
+				err := errors.New("at least one of log or metric context must be included")
+				return metricutil.MarkMeasurementError(newMeasurement, err)
 			}
-			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
+			payload.CanaryDeployments = append(payload.CanaryDeployments, deployment)
 		}
-		if len(mapServiceNameBaselineLogs) != 0 && len(mapServiceNameBaselineMetrics) == 0 {
-			internal := canaryDeployments{
-				BaselineStartTimeMs: baselineStartTime,
-				CanaryStartTimeMs:   canaryStartTime,
-				Baseline:            &logMetric{Log: mapServiceNameBaselineLogs},
-				Canary:              &logMetric{Log: mapServiceNameCanaryLogs},
-			}
-			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
-		}
-		if len(mapServiceNameBaselineLogs) == 0 && len(mapServiceNameBaselineMetrics) != 0 {
-			internal := canaryDeployments{
-				BaselineStartTimeMs: baselineStartTime,
-				CanaryStartTimeMs:   canaryStartTime,
-				Baseline:            &logMetric{Metric: mapServiceNameBaselineMetrics},
-				Canary:              &logMetric{Metric: mapServiceNameCanaryMetrics},
-			}
-			payload.CanaryDeployments = append(payload.CanaryDeployments, internal)
-
-		}
-
 	} else {
-
 		internal := canaryDeployments{
 			BaselineStartTimeMs: baselineStartTime,
 			CanaryStartTimeMs:   canaryStartTime,
@@ -277,15 +276,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+
 	// create a request object
-	data, err := makeRequest(p.client, "POST", configIdLookupURL, string(buffer), metric.Provider.OPSMX.User)
+	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), metric.Provider.OPSMX.User)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	if !json.Valid(data) {
-		err = errors.New("invalid Response")
-		return metricutil.MarkMeasurementError(newMeasurement, err)
-	}
+
 	var canaryId string
 	var canary map[string]interface{}
 
@@ -307,7 +304,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
 	}
-	reportUrl := fmt.Sprintf(reportUrlFormat, metric.Provider.OPSMX.GateUrl, metric.Provider.OPSMX.Application, canaryId)
+	reportUrl, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, reportUrlFormat, metric.Provider.OPSMX.Application, canaryId)
+	if err != nil {
+		return metricutil.MarkMeasurementError(newMeasurement, err)
+	}
 
 	//creating a map to return the reporturl and associated data
 	mapMetadata := make(map[string]string)
@@ -341,6 +341,7 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 		err := errors.New("invalid Response")
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
+
 	json.Unmarshal(data, &result)
 	jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
 	json.Unmarshal(jsonBytes, &finalScore)
@@ -356,9 +357,11 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 }
 
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-
 	canaryId := measurement.Metadata["canaryId"]
-	scoreURL := fmt.Sprintf(scoreUrlFormat, metric.Provider.OPSMX.GateUrl, canaryId)
+	scoreURL, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, canaryId)
+	if err != nil {
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
 
 	data, err := makeRequest(p.client, "GET", scoreURL, "", metric.Provider.OPSMX.User)
 	if err != nil {
@@ -373,10 +376,8 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 		measurement.ResumeAt = &resumeTime
 		measurement.Phase = v1alpha1.AnalysisPhaseRunning
-
 		return measurement
 	}
-
 	measurement = processResume(data, metric, measurement)
 	finishTime := timeutil.MetaNow()
 	measurement.FinishedAt = &finishTime
@@ -402,10 +403,8 @@ func NewOPSMXProvider(logCtx log.Entry, client http.Client) *Provider {
 }
 
 func NewHttpClient() http.Client {
-
 	c := http.Client{
 		Timeout: httpConnectionTimeout,
 	}
-
 	return c
 }
