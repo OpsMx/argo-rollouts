@@ -365,6 +365,9 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 	var status map[string]interface{}
+	json.Unmarshal(data, &status)
+	a, _ := json.MarshalIndent(status["status"], "", "   ")
+	json.Unmarshal(a, &status)
 	//return the measurement if the status is Running, to be resumed at resumeTime
 	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
