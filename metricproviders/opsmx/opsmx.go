@@ -116,6 +116,87 @@ func makeRequest(client http.Client, requestType string, url string, body string
 	return data, err
 }
 
+func getServicePayload(metric v1alpha1.Metric) (string, error) {
+
+	var (
+		baselinelog    string
+		canarylog      string
+		baselinemetric string
+		canarymetric   string
+
+		ServiceJobPayload     string
+		baselinemetricPayload string
+		canarymetricPayload   string
+		baselinelogPayload    string
+		canarylogPayload      string
+		baselinePayload       string
+		canaryPayload         string
+
+		err error
+	)
+
+	for _, item := range metric.Provider.OPSMX.Services {
+		if item.LogScopeVariables != "" {
+			if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
+				err = errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
+				return "", err
+			}
+			if baselinelog == "" {
+				baselinelog = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.BaselineLogScope)
+				canarylog = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.CanaryLogScope)
+			} else {
+				temp := fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.BaselineLogScope)
+				baselinelog = fmt.Sprintf("%s\n,\n%s", baselinelog, temp)
+				temp = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.LogScopeVariables, item.CanaryLogScope)
+				canarylog = fmt.Sprintf("%s\n,\n%s", canarylog, temp)
+			}
+		}
+		if item.MetricScopeVariables != "" {
+			if len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.BaselineMetricScope, ",")) || len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.CanaryMetricScope, ",")) {
+				err = errors.New("mismatch in amount of metric scope variables and baseline/canary metric scope")
+				return "", err
+			}
+			if baselinemetric == "" {
+				baselinemetric = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.BaselineMetricScope)
+				canarymetric = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.CanaryMetricScope)
+			} else {
+				temp := fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.BaselineMetricScope)
+				baselinemetric = fmt.Sprintf("%s\n,\n%s", baselinemetric, temp)
+				temp = fmt.Sprintf(internalFormat, item.ServiceName, item.GateName, item.MetricScopeVariables, item.CanaryMetricScope)
+				canarymetric = fmt.Sprintf("%s\n,\n%s", canarymetric, temp)
+			}
+		}
+	}
+
+	if baselinelog != "" {
+		baselinelogPayload = fmt.Sprintf(logPayloadFormat, baselinelog)
+		canarylogPayload = fmt.Sprintf(logPayloadFormat, canarylog)
+	}
+
+	if baselinemetric != "" {
+		baselinemetricPayload = fmt.Sprintf(metricPayloadFormat, baselinemetric)
+		canarymetricPayload = fmt.Sprintf(metricPayloadFormat, canarymetric)
+	}
+
+	if baselinelogPayload == "" && baselinemetricPayload == "" {
+		err = errors.New("either provide log or metric arguments")
+		return "", err
+	}
+
+	if baselinelogPayload != "" && baselinemetricPayload != "" {
+		baselinePayload = fmt.Sprintf("%s,\n%s", baselinelogPayload, baselinemetricPayload)
+		canaryPayload = fmt.Sprintf("%s,\n%s", canarylogPayload, canarymetricPayload)
+		ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canaryPayload, baselinePayload)
+	} else {
+		if baselinelogPayload != "" && baselinemetricPayload == "" {
+			ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canarylogPayload, baselinelogPayload)
+		} else {
+			ServiceJobPayload = fmt.Sprintf(servicesjobPayloadFormat, canarymetricPayload, baselinemetricPayload)
+		}
+	}
+	return ServiceJobPayload, err
+}
+
 func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.CanaryStartTime == "" && metric.Provider.OPSMX.BaselineStartTime == "" && metric.Provider.OPSMX.LifetimeHours == "" {
 		return errors.New("either provide lifetimehours or start time")
@@ -351,6 +432,24 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
+	var status map[string]interface{}
+	json.Unmarshal(data, &status)
+	a, _ := json.MarshalIndent(status["status"], "", "   ")
+	json.Unmarshal(a, &status)
+
+	//return the measurement if the status is Running, to be resumed at resumeTime
+	if status["status"] == "RUNNING" {
+		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
+		measurement.ResumeAt = &resumeTime
+		measurement.Phase = v1alpha1.AnalysisPhaseRunning
+
+		return measurement
+	}
+	//res.Body.Close()
+	if !json.Valid(data) {
+		err = errors.New("invalid Response")
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
 	json.Unmarshal(data, &result)
 	jsonBytes, _ := json.MarshalIndent(result["canaryResult"], "", "   ")
 	json.Unmarshal(jsonBytes, &finalScore)
