@@ -3,6 +3,7 @@ package opsmx
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -663,6 +664,29 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "mismatch in amount of metric scope variables and baseline/canary metric scope",
 	},
+	//Test case for when end time is less than start time
+	{
+		metric : v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T13:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					EndTime:           "2022-08-02T12:45:00Z",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "start time cannot be greater than end time",
+	},
+
 }
 
 const (
@@ -674,7 +698,7 @@ func TestRunSucessCases(t *testing.T) {
 	// Test Cases
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
-		c := NewTestClient(func(req *http.Request) *http.Response {
+		c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 			assert.Equal(t, req.URL.String(), endpointRegisterCanary)
 
 			body, err := ioutil.ReadAll(req.Body)
@@ -701,7 +725,7 @@ func TestRunSucessCases(t *testing.T) {
 				`)),
 				// Must be set to non-nil value or it panics
 				Header: make(http.Header),
-			}
+			},nil
 		})
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
@@ -716,7 +740,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
-		c := NewTestClient(func(req *http.Request) *http.Response {
+		c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 			assert.Equal(t, req.URL.String(), endpointCheckCanaryStatus)
 
 			return &http.Response{
@@ -752,7 +776,7 @@ func TestResumeSucessCases(t *testing.T) {
 				`)),
 				// Must be set to non-nil value or it panics
 				Header: make(http.Header),
-			}
+			},nil
 		})
 
 		provider := NewOPSMXProvider(*e, c)
@@ -774,7 +798,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
+	c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
 
 		return &http.Response{
@@ -790,7 +814,7 @@ func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 			`)),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
-		}
+		},nil
 	})
 
 	metric := v1alpha1.Metric{
@@ -832,10 +856,9 @@ func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 
 }
 
-// Change the message after the discussion on message parsing
 func TestIncorrectApplicationName(t *testing.T) {
 	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
+	c := NewTestClient(func(req *http.Request) (*http.Response,error){
 		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
 
 		return &http.Response{
@@ -851,7 +874,7 @@ func TestIncorrectApplicationName(t *testing.T) {
 			`)),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
-		}
+		},nil
 	})
 
 	metric := v1alpha1.Metric{
@@ -881,14 +904,13 @@ func TestIncorrectApplicationName(t *testing.T) {
 }
 
 func TestIncorrectGateURL(t *testing.T) {
-	t.Skip("Skipping the test case, as this scenario is being reworked on")
 	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
+	c := NewTestClient(func(req *http.Request) (*http.Response,error){
 		return &http.Response{
-			StatusCode: 400,
+			StatusCode: 404,
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
-		}
+		}, errors.New("Post \"https://opsmx.invalidurl.tst\": dial tcp: lookup https://opsmx.invalidurl.tst: no such host")
 	})
 
 	metric := v1alpha1.Metric{
@@ -896,7 +918,7 @@ func TestIncorrectGateURL(t *testing.T) {
 		Provider: v1alpha1.MetricProvider{
 			OPSMX: &v1alpha1.OPSMXMetric{
 				GateUrl:           "https://opsmx.invalidurl.tst",
-				Application:       "testap",
+				Application:       "testapp",
 				User:              "admin",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
@@ -912,20 +934,27 @@ func TestIncorrectGateURL(t *testing.T) {
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
-	assert.Equal(t, "invalid Response", measurement.Message)
 	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 
 }
 
 func TestNoUserDefined(t *testing.T) {
-	t.Skip("Skipping the test case, as this scenario is being reworked on")
 	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
+	c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 		return &http.Response{
-			StatusCode: 400,
+			StatusCode: 500,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			{
+				"timestamp": 1662442034995,
+				"status": 500,
+				"error": "Internal Server Error",
+				"exception": "feign.FeignException$NotFound",
+				"message": "message1"
+			}
+			`)),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
-		}
+		},nil
 	})
 
 	metric := v1alpha1.Metric{
@@ -946,54 +975,16 @@ func TestNoUserDefined(t *testing.T) {
 	}
 	provider := NewOPSMXProvider(*e, c)
 	measurement := provider.Run(newAnalysisRun(), metric)
-	fmt.Println(measurement)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
-	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
-
-}
-
-func TestEndTimeBeforeStartTime(t *testing.T) {
-	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
-		assert.Equal(t, req.URL.String(), endpointRegisterCanary)
-
-		return &http.Response{
-			StatusCode: 500,
-			// Must be set to non-nil value or it panics
-			Header: make(http.Header),
-		}
-	})
-
-	metric := v1alpha1.Metric{
-		Name: "testapp",
-		Provider: v1alpha1.MetricProvider{
-			OPSMX: &v1alpha1.OPSMXMetric{
-				GateUrl:           "https://opsmx.test.tst",
-				Application:       "testapp",
-				BaselineStartTime: "2022-08-02T13:15:00Z",
-				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				EndTime:           "2022-08-02T12:45:00Z",
-				Threshold: v1alpha1.OPSMXThreshold{
-					Pass:     80,
-					Marginal: 60,
-				},
-			},
-		},
-	}
-
-	provider := NewOPSMXProvider(*e, c)
-	measurement := provider.Run(newAnalysisRun(), metric)
-	assert.NotNil(t, measurement.StartedAt)
-	assert.NotNil(t, measurement.FinishedAt)
-	assert.Equal(t, "start time cannot be greater than end time", measurement.Message)
+	assert.Equal(t,"Internal Server Error",measurement.Message)
 	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 
 }
 
 func TestIncorrectServiceName(t *testing.T) {
 	e := log.NewEntry(log.New())
-	c := NewTestClient(func(req *http.Request) *http.Response {
+	c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 		assert.Equal(t, req.URL.String(), endpointCheckCanaryStatus)
 
 		return &http.Response{
@@ -1030,7 +1021,7 @@ func TestIncorrectServiceName(t *testing.T) {
 				`)),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
-		}
+		},nil
 	})
 	metric := v1alpha1.Metric{
 		Name: "testapp",
@@ -1077,7 +1068,7 @@ func TestIncorrectServiceName(t *testing.T) {
 func TestGenericNegativeTestsRun(t *testing.T) {
 	for _, test := range negativeTests {
 		e := log.NewEntry(log.New())
-		c := NewTestClient(func(req *http.Request) *http.Response {
+		c := NewTestClient(func(req *http.Request) (*http.Response,error) {
 			assert.Equal(t, req.URL.String(), endpointRegisterCanary)
 			return &http.Response{
 				StatusCode: 200,
@@ -1088,7 +1079,7 @@ func TestGenericNegativeTestsRun(t *testing.T) {
 				`)),
 				// Must be set to non-nil value or it panics
 				Header: make(http.Header),
-			}
+			},nil
 		})
 		provider := NewOPSMXProvider(*e, c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
@@ -1104,11 +1095,11 @@ func newAnalysisRun() *v1alpha1.AnalysisRun {
 }
 
 // RoundTripFunc .
-type RoundTripFunc func(req *http.Request) *http.Response
+type RoundTripFunc func(req *http.Request) (*http.Response,error)
 
 // RoundTrip .
 func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req), nil
+	return f(req)
 }
 
 // NewTestClient returns *http.Client with Transport replaced to avoid making real calls
