@@ -51,9 +51,7 @@ var successfulTests = []struct {
 			"canaryDeployments": [
 						{
 						"canaryStartTimeMs": "1659100500000",
-						"baselineStartTimeMs": "1659100500000",
-						"baseline": {},
-						"canary": {}
+						"baselineStartTimeMs": "1659100500000"
 						}
 			  ]
 		}`,
@@ -92,9 +90,7 @@ var successfulTests = []struct {
 			"canaryDeployments": [
 						{
 						"canaryStartTimeMs": "1660137300000",
-						"baselineStartTimeMs": "1660137300000",
-						"baseline": {},
-						"canary": {}
+						"baselineStartTimeMs": "1660137300000"
 						}
 			  ]
 		}`,
@@ -133,9 +129,7 @@ var successfulTests = []struct {
 			"canaryDeployments": [
 						{
 						"canaryStartTimeMs": "1660137300000",
-						"baselineStartTimeMs": "1660137300000",
-						"baseline": {},
-						"canary": {}
+						"baselineStartTimeMs": "1660137300000"
 						}
 			  ]
 		}`,
