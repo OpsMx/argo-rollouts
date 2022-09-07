@@ -62,8 +62,8 @@ type canarySuccessCriteria struct {
 type canaryDeployments struct {
 	CanaryStartTimeMs   string    `json:"canaryStartTimeMs"`
 	BaselineStartTimeMs string    `json:"baselineStartTimeMs"`
-	Canary              logMetric `json:"canary,omitempty"`
-	Baseline            logMetric `json:"baseline,omitempty"`
+	Canary              *logMetric `json:"canary,omitempty"`
+	Baseline            *logMetric `json:"baseline,omitempty"`
 }
 type logMetric struct {
 	Log    map[string]map[string]string `json:"log,omitempty"`
@@ -220,11 +220,11 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		deployment := canaryDeployments{
 			BaselineStartTimeMs: baselineStartTime,
 			CanaryStartTimeMs:   canaryStartTime,
-			Baseline: logMetric{
+			Baseline: &logMetric{
 				Log:    map[string]map[string]string{},
 				Metric: map[string]map[string]string{},
 			},
-			Canary: logMetric{
+			Canary: &logMetric{
 				Log:    map[string]map[string]string{},
 				Metric: map[string]map[string]string{},
 			},
