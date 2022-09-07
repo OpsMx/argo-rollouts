@@ -60,8 +60,8 @@ type canarySuccessCriteria struct {
 }
 
 type canaryDeployments struct {
-	CanaryStartTimeMs   string    `json:"canaryStartTimeMs"`
-	BaselineStartTimeMs string    `json:"baselineStartTimeMs"`
+	CanaryStartTimeMs   string     `json:"canaryStartTimeMs"`
+	BaselineStartTimeMs string     `json:"baselineStartTimeMs"`
 	Canary              *logMetric `json:"canary,omitempty"`
 	Baseline            *logMetric `json:"baseline,omitempty"`
 }
@@ -232,6 +232,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		for _, item := range metric.Provider.OPSMX.Services {
 			valid := false
 			if item.LogScopeVariables != "" {
+				if item.BaselineLogScope == "" || item.CanaryLogScope == "" {
+					err := errors.New("missing baseline/canary log scope")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
 				if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
 					err := errors.New("mismatch in amount of log scope variables and baseline/canary log scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -249,6 +253,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			}
 
 			if item.MetricScopeVariables != "" {
+				if item.BaselineMetricScope == "" || item.CanaryMetricScope == "" {
+					err := errors.New("missing baseline/canary metric scope")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
 				if len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.BaselineMetricScope, ",")) || len(strings.Split(item.MetricScopeVariables, ",")) != len(strings.Split(item.CanaryMetricScope, ",")) {
 					err := errors.New("mismatch in amount of metric scope variables and baseline/canary metric scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -380,6 +388,10 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		measurement.ResumeAt = &resumeTime
 		measurement.Phase = v1alpha1.AnalysisPhaseRunning
 		return measurement
+	}
+	if status["status"] == "CANCELLED" {
+		err := errors.New("analysis cancelled")
+		return metricutil.MarkMeasurementError(measurement, err)
 	}
 	measurement = processResume(data, metric, measurement)
 	finishTime := timeutil.MetaNow()
