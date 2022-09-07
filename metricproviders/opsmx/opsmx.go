@@ -390,10 +390,11 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		return measurement
 	}
 	if status["status"] == "CANCELLED" {
-		err := errors.New("analysis cancelled")
-		return metricutil.MarkMeasurementError(measurement, err)
+		measurement.Phase = v1alpha1.AnalysisPhaseFailed
+		measurement.Message = "Analysis Cancelled"
+	} else {
+		measurement = processResume(data, metric, measurement)
 	}
-	measurement = processResume(data, metric, measurement)
 	finishTime := timeutil.MetaNow()
 	measurement.FinishedAt = &finishTime
 	return measurement
