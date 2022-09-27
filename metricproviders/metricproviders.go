@@ -65,7 +65,7 @@ func (f *ProviderFactory) NewProvider(logCtx log.Entry, metric v1alpha1.Metric) 
 		return kayenta.NewKayentaProvider(logCtx, c), nil
 	case opsmx.ProviderType:
 		c := opsmx.NewHttpClient()
-		return opsmx.NewOPSMXProvider(logCtx, c), nil
+		return opsmx.NewOPSMXProvider(logCtx,f.KubeClient, c), nil
 	case webmetric.ProviderType:
 		c := webmetric.NewWebMetricHttpClient(metric)
 		p, err := webmetric.NewWebMetricJsonParser(metric)

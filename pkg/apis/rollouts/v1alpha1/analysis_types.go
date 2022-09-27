@@ -436,8 +436,8 @@ type Measurement struct {
 }
 
 type OPSMXMetric struct {
-	User                 string         `json:"user" protobuf:"bytes,1,opt,name=user"`
-	GateUrl              string         `json:"gateUrl" protobuf:"bytes,2,opt,name=gateUrl"`
+	User                 string         `json:"user,omitempty" protobuf:"bytes,1,opt,name=user"`
+	GateUrl              string         `json:"gateUrl,omitempty" protobuf:"bytes,2,opt,name=gateUrl"`
 	Application          string         `json:"application" protobuf:"bytes,3,opt,name=application"`
 	BaselineStartTime    string         `json:"baselineStartTime,omitempty" protobuf:"bytes,4,opt,name=baselineStartTime"`
 	CanaryStartTime      string         `json:"canaryStartTime,omitempty" protobuf:"bytes,5,opt,name=canaryStartTime"`
@@ -447,6 +447,7 @@ type OPSMXMetric struct {
 	GlobalMetricTemplate string         `json:"globalMetricTemplate,omitempty" protobuf:"bytes,9,opt,name=globalMetricTemplate"`
 	Threshold            OPSMXThreshold `json:"threshold" protobuf:"bytes,10,opt,name=threshold"`
 	Services             []OPSMXService `json:"services" protobuf:"bytes,11,rep,name=services"`
+	Profile              string         `json:"profile,omitempty" protobuf:"bytes,12,opt,name=profile"`
 }
 
 type OPSMXService struct {

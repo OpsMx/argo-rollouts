@@ -1,6 +1,7 @@
 package opsmx
 
 import (
+	"context"
 	"encoding/json"
 
 	"math"
@@ -19,10 +20,12 @@ import (
 	"errors"
 
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
+	"github.com/argoproj/argo-rollouts/utils/defaults"
 	metricutil "github.com/argoproj/argo-rollouts/utils/metric"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -32,11 +35,15 @@ const (
 	reportUrlFormat                         = `ui/application/deploymentverification/`
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
+	defaultConfigMapName                    = "opsmx-profile"
+	defaultcdIntegration                    = "argorollouts"
+	cdIntegrationArgoCD                     = "argocd"
 )
 
 type Provider struct {
-	logCtx log.Entry
-	client http.Client
+	logCtx        log.Entry
+	kubeclientset kubernetes.Interface
+	client        http.Client
 }
 
 type jobPayload struct {
@@ -97,32 +104,50 @@ func urlJoiner(gateUrl string, paths ...string) (string, error) {
 	return u.String(), nil
 }
 
-func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
+func makeRequest(client http.Client, requestType string, url string, body string, cmData map[string]string) ([]byte, error, map[string]string) {
 	reqBody := strings.NewReader(body)
-
+	mp := map[string]string{}
 	req, err := http.NewRequest(
 		requestType,
 		url,
 		reqBody,
 	)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, err, nil
 	}
 
-	req.Header.Set("x-spinnaker-user", user)
+	req.Header.Set("x-spinnaker-user", cmData["user"])
 	req.Header.Set("Content-Type", "application/json")
+	if cdIntegration, ok := cmData["cdIntegration"]; ok {
+		req.Header.Set("X-SOURCE-TYPE", cdIntegration)
+	}
+	if source, ok := cmData["source"]; ok {
+		req.Header.Set("X-SOURCE-NAME", source)
+	}
+
+	for name, values := range req.Header {
+		for _, value := range values {
+			log.Infof("Key is %s, value is %s", name, value)
+			mp[name] = value
+
+		}
+	}
+	log.Infof("Successfully created maps")
+	mp["gateUrl"] = url
+	mp["payload"] = body
 
 	res, err := client.Do(req)
 	if err != nil {
-		return []byte{}, err
+		log.Infof("Successfully created maps")
+		return []byte{}, err, mp
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, err, nil
 	}
-	return data, err
+	return data, err, nil
 }
 
 // Check few conditions pre-analysis
@@ -192,15 +217,85 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 	return canaryStartTime, baselineStartTime, lifetimeHours, nil
 }
 
+func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
+	//TODO - Refactor
+	ns := defaults.Namespace()
+	cmData := map[string]string{}
+	configMapName := defaultConfigMapName
+	if metric.Provider.OPSMX.Profile != "" {
+		configMapName = metric.Provider.OPSMX.Profile
+	}
+
+	configmap, err := kubeclientset.CoreV1().Secrets(ns).Get(context.TODO(), configMapName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	gateUrl := metric.Provider.OPSMX.GateUrl
+	if gateUrl == "" {
+		configmapGateurl, ok := configmap.Data["gateUrl"]
+		if !ok {
+			err := errors.New("the gateUrl is not specified both in the template and in the secret")
+			return nil, err
+		}
+		gateUrl = string(configmapGateurl)
+	}
+	cmData["gateUrl"] = gateUrl
+
+	user := metric.Provider.OPSMX.User
+	if user == "" {
+		configmapUser, ok := configmap.Data["user"]
+		if !ok {
+			err := errors.New("the User is not specified both in the template and in the secret")
+			return nil, err
+		}
+		user = string(configmapUser)
+	}
+	cmData["user"] = user
+
+	if isRun == false {
+		return cmData, nil
+	}
+
+	//TODO - Check for yaml bool types
+	cdIntegration := defaultcdIntegration
+	configMapCdIntegration, ok := configmap.Data["sourceName"]
+	if ok {
+		if string(configMapCdIntegration) == "true" {
+			cdIntegration = cdIntegrationArgoCD
+		}
+		//TODO - Do not raise an error pass on a message
+		if string(configMapCdIntegration) != "true" && string(configMapCdIntegration) != "false" {
+			err := errors.New("cdIntegration should be either true or false")
+			return nil, err
+		}
+	}
+	cmData["cdIntegration"] = cdIntegration
+
+	configmapSourceName, ok := configmap.Data["sourceName"]
+	if !ok {
+		err := errors.New("sourceName is not specified in the secret")
+		return nil, err
+	}
+	cmData["sourceName"] = string(configmapSourceName)
+
+	return cmData, nil
+}
+
 // Run queries opsmx for the metric
 func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alpha1.Measurement {
 	startTime := timeutil.MetaNow()
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
+	log.Infof("Before getDataConfigMap")
+	configMapData, err := getDataConfigMap(metric, p.kubeclientset, true)
+	if err != nil {
+		return metricutil.MarkMeasurementError(newMeasurement, err)
+	}
+	log.Infof("After getDataConfigMap")
 
 	//develop Canary Register Url
-	canaryurl, err := urlJoiner(metric.Provider.OPSMX.GateUrl, v5configIdLookupURLFormat)
+	canaryurl, err := urlJoiner(configMapData["gateUrl"], v5configIdLookupURLFormat)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -349,8 +444,11 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), metric.Provider.OPSMX.User)
+	log.Infof("Before make request")
+	data, err, mapHeaderPayload := makeRequest(p.client, "POST", canaryurl, string(buffer), configMapData)
 	if err != nil {
+		log.Infof("In the error block")
+		newMeasurement.Metadata = mapHeaderPayload
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
@@ -372,7 +470,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	//Develop the Report URL
 	stringifiedCanaryId := string(canary.CanaryId)
-	reportUrl, err := urlJoiner(metric.Provider.OPSMX.GateUrl, reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
+	reportUrl, err := urlJoiner(configMapData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -428,13 +526,18 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	canaryId := measurement.Metadata["canaryId"]
-	scoreURL, err := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, canaryId)
+	configMapData, err := getDataConfigMap(metric, p.kubeclientset, false)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
-	data, err := makeRequest(p.client, "GET", scoreURL, "", metric.Provider.OPSMX.User)
+	canaryId := measurement.Metadata["canaryId"]
+	scoreURL, err := urlJoiner(configMapData["gateUrl"], scoreUrlFormat, canaryId)
+	if err != nil {
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
+
+	data, err, _ := makeRequest(p.client, "GET", scoreURL, "", configMapData)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
@@ -473,10 +576,11 @@ func (p *Provider) GarbageCollect(run *v1alpha1.AnalysisRun, metric v1alpha1.Met
 	return nil
 }
 
-func NewOPSMXProvider(logCtx log.Entry, client http.Client) *Provider {
+func NewOPSMXProvider(logCtx log.Entry, kubeclientset kubernetes.Interface, client http.Client) *Provider {
 	return &Provider{
-		logCtx: logCtx,
-		client: client,
+		logCtx:        logCtx,
+		kubeclientset: kubeclientset,
+		client:        client,
 	}
 }
 
