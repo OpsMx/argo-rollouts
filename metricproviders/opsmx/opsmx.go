@@ -232,9 +232,9 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 	}
 	gateUrl := metric.Provider.OPSMX.GateUrl
 	if gateUrl == "" {
-		configmapGateurl, ok := configmap.Data["gateUrl"]
+		configmapGateurl, ok := configmap.Data["gate-url"]
 		if !ok {
-			err := errors.New("the gateUrl is not specified both in the template and in the secret")
+			err := errors.New("the gate-url is not specified both in the template and in the secret")
 			return nil, err
 		}
 		gateUrl = string(configmapGateurl)
@@ -245,7 +245,7 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 	if user == "" {
 		configmapUser, ok := configmap.Data["user"]
 		if !ok {
-			err := errors.New("the User is not specified both in the template and in the secret")
+			err := errors.New("the user is not specified both in the template and in the secret")
 			return nil, err
 		}
 		user = string(configmapUser)
@@ -258,22 +258,22 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 
 	//TODO - Check for yaml bool types
 	cdIntegration := defaultcdIntegration
-	configMapCdIntegration, ok := configmap.Data["sourceName"]
+	configMapCdIntegration, ok := configmap.Data["cd-integration"]
 	if ok {
 		if string(configMapCdIntegration) == "true" {
 			cdIntegration = cdIntegrationArgoCD
 		}
 		//TODO - Do not raise an error pass on a message
 		if string(configMapCdIntegration) != "true" && string(configMapCdIntegration) != "false" {
-			err := errors.New("cdIntegration should be either true or false")
+			err := errors.New("cd-integration should be either true or false")
 			return nil, err
 		}
 	}
 	cmData["cdIntegration"] = cdIntegration
 
-	configmapSourceName, ok := configmap.Data["sourceName"]
+	configmapSourceName, ok := configmap.Data["source-name"]
 	if !ok {
-		err := errors.New("sourceName is not specified in the secret")
+		err := errors.New("source-name is not specified in the secret")
 		return nil, err
 	}
 	cmData["sourceName"] = string(configmapSourceName)
