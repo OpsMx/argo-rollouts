@@ -121,7 +121,7 @@ func makeRequest(client http.Client, requestType string, url string, body string
 	if cdIntegration, ok := cmData["cdIntegration"]; ok {
 		req.Header.Set("X-SOURCE-TYPE", cdIntegration)
 	}
-	if source, ok := cmData["source"]; ok {
+	if source, ok := cmData["sourceName"]; ok {
 		req.Header.Set("X-SOURCE-NAME", source)
 	}
 
@@ -138,7 +138,7 @@ func makeRequest(client http.Client, requestType string, url string, body string
 
 	res, err := client.Do(req)
 	if err != nil {
-		log.Infof("Successfully created maps")
+		log.Infof("In error")
 		return []byte{}, err, mp
 	}
 	defer res.Body.Close()
@@ -147,7 +147,7 @@ func makeRequest(client http.Client, requestType string, url string, body string
 	if err != nil {
 		return []byte{}, err, nil
 	}
-	return data, err, nil
+	return data, err, mp
 }
 
 // Check few conditions pre-analysis
@@ -292,6 +292,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+	log.Infof("%s",configMapData)
 	log.Infof("After getDataConfigMap")
 
 	//develop Canary Register Url
@@ -479,6 +480,9 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["Group"] = run.Name
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
+	for k,v :=range mapHeaderPayload{
+		mapMetadata[k]=v
+	}
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
