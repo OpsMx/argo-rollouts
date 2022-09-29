@@ -177,9 +177,6 @@ func basicChecks(metric v1alpha1.Metric) error {
 	if intervalTime < 3 {
 		return errors.New("interval time cannot be less than 3 minutes")
 	}
-	if metric.Provider.OPSMX.GlobalLogTemplate == "" && metric.Provider.OPSMX.GlobalMetricTemplate == "" && metric.Provider.OPSMX.Services == nil || len(metric.Provider.OPSMX.Services) == 0 {
-		return errors.New("either provide global templates or services")
-	}
 	return nil
 }
 
@@ -306,7 +303,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("%s",configMapData)
+	log.Infof("%s", configMapData)
 	log.Infof("After getDataConfigMap")
 
 	//develop Canary Register Url
@@ -342,19 +339,20 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		},
 		CanaryDeployments: []canaryDeployments{},
 	}
-	deployment := canaryDeployments{
-		BaselineStartTimeMs: baselineStartTime,
-		CanaryStartTimeMs:   canaryStartTime,
-		Baseline: &logMetric{
-			Log:    map[string]map[string]string{},
-			Metric: map[string]map[string]string{},
-		},
-		Canary: &logMetric{
-			Log:    map[string]map[string]string{},
-			Metric: map[string]map[string]string{},
-		},
-	}
+
 	if metric.Provider.OPSMX.Services != nil || len(metric.Provider.OPSMX.Services) != 0 {
+		deployment := canaryDeployments{
+			BaselineStartTimeMs: baselineStartTime,
+			CanaryStartTimeMs:   canaryStartTime,
+			Baseline: &logMetric{
+				Log:    map[string]map[string]string{},
+				Metric: map[string]map[string]string{},
+			},
+			Canary: &logMetric{
+				Log:    map[string]map[string]string{},
+				Metric: map[string]map[string]string{},
+			},
+		}
 		for i, item := range metric.Provider.OPSMX.Services {
 			valid := false
 			serviceName := fmt.Sprintf("service%d", i+1)
@@ -363,20 +361,36 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			}
 			gateName := fmt.Sprintf("gate%d", i+1)
 			//For Log Analysis is to be added in analysis-run
-			if item.LogTemplateName != "" || metric.Provider.OPSMX.GlobalLogTemplate != "" {
+			if item.LogScopeVariables != "" {
+				//Check if no baseline or canary
+				if item.BaselineLogScope == "" || item.CanaryLogScope == "" {
+					err := errors.New("missing baseline/canary for log analysis")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
+				//Check if the number of placeholders provided dont match
+				if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
+					err := errors.New("mismatch in number of log scope variables and baseline/canary log scope")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
+				if item.LogTemplateName == "" && metric.Provider.OPSMX.GlobalLogTemplate == "" {
+					err := errors.New("provide either a service specific log template or global log template")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
 				//Add mandatory field for baseline
 				deployment.Baseline.Log[serviceName] = map[string]string{
-					"serviceGate": gateName,
+					item.LogScopeVariables: item.BaselineLogScope,
+					"serviceGate":          gateName,
 				}
 				//Add mandatory field for canary
 				deployment.Canary.Log[serviceName] = map[string]string{
-					"serviceGate": gateName,
+					item.LogScopeVariables: item.CanaryLogScope,
+					"serviceGate":          gateName,
 				}
+
 				//Add service specific templateName
 				if item.LogTemplateName != "" {
 					deployment.Baseline.Log[serviceName]["template"] = item.LogTemplateName
 					deployment.Canary.Log[serviceName]["template"] = item.LogTemplateName
-
 				} else {
 					deployment.Baseline.Log[serviceName]["template"] = metric.Provider.OPSMX.GlobalLogTemplate
 					deployment.Canary.Log[serviceName]["template"] = metric.Provider.OPSMX.GlobalLogTemplate
@@ -387,26 +401,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
 					deployment.Canary.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
 				}
-
-				if item.BaselineLogScope == "" && item.CanaryLogScope != "" || item.BaselineLogScope != "" && item.CanaryLogScope == "" {
-					err := errors.New("missing baseline/canary for log analysis")
-					return metricutil.MarkMeasurementError(newMeasurement, err)
-				}
-				//Check if the number of placeholders provided dont match
-				if len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.BaselineLogScope, ",")) || len(strings.Split(item.LogScopeVariables, ",")) != len(strings.Split(item.CanaryLogScope, ",")) {
-					err := errors.New("mismatch in number of log scope variables and baseline/canary log scope")
-					return metricutil.MarkMeasurementError(newMeasurement, err)
-				}
-				if item.BaselineLogScope != "" && item.CanaryLogScope != "" {
-					deployment.Baseline.Log[serviceName][item.LogScopeVariables] = item.BaselineLogScope
-					deployment.Canary.Log[serviceName][item.LogScopeVariables] = item.CanaryLogScope
-				}
 				valid = true
 			}
+
 			//For metric analysis is to be added in analysis-run
-			if item.MetricTemplateName != "" || metric.Provider.OPSMX.GlobalMetricTemplate != "" {
+			if item.MetricScopeVariables != "" {
 				//Check if no baseline or canary
-				if item.BaselineMetricScope == "" && item.CanaryMetricScope != "" || item.BaselineMetricScope != "" && item.CanaryMetricScope == "" {
+				if item.BaselineMetricScope == "" || item.CanaryMetricScope == "" {
 					err := errors.New("missing baseline/canary for metric analysis")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
@@ -415,13 +416,19 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					err := errors.New("mismatch in number of metric scope variables and baseline/canary metric scope")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
+				if item.MetricTemplateName == "" && metric.Provider.OPSMX.GlobalMetricTemplate == "" {
+					err := errors.New("provide either a service specific metric template or global metric template")
+					return metricutil.MarkMeasurementError(newMeasurement, err)
+				}
 				//Add mandatory field for baseline
 				deployment.Baseline.Metric[serviceName] = map[string]string{
-					"serviceGate": gateName,
+					item.MetricScopeVariables: item.BaselineMetricScope,
+					"serviceGate":             gateName,
 				}
 				//Add mandatory field for canary
 				deployment.Canary.Metric[serviceName] = map[string]string{
-					"serviceGate": gateName,
+					item.MetricScopeVariables: item.CanaryMetricScope,
+					"serviceGate":             gateName,
 				}
 				//Add templateName
 				if item.MetricTemplateName != "" {
@@ -437,46 +444,20 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
 					deployment.Canary.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
 				}
-
-				if item.BaselineMetricScope != "" && item.CanaryMetricScope != "" {
-					deployment.Baseline.Metric[serviceName][item.MetricScopeVariables] = item.BaselineMetricScope
-					deployment.Canary.Metric[serviceName][item.MetricScopeVariables] = item.CanaryMetricScope
-				}
 				valid = true
 
 			}
 			//Check if no logs or metrics were provided
 			if !valid {
-				err := errors.New("at least one of log or metric context must be included in either global variables or local service variables")
+				err := errors.New("at least one of log or metric context must be included")
 				return metricutil.MarkMeasurementError(newMeasurement, err)
 			}
 		}
 		payload.CanaryDeployments = append(payload.CanaryDeployments, deployment)
 	} else {
-		serviceName := "service1"
-		gateName := "gate1"
 		//Check if no services were provided
-		if metric.Provider.OPSMX.GlobalLogTemplate != "" {
-			deployment.Baseline.Log[serviceName] = map[string]string{
-				"template":    metric.Provider.OPSMX.GlobalLogTemplate,
-				"serviceGate": gateName,
-			}
-			deployment.Canary.Log[serviceName] = map[string]string{
-				"template":    metric.Provider.OPSMX.GlobalLogTemplate,
-				"serviceGate": gateName,
-			}
-		}
-		if metric.Provider.OPSMX.GlobalMetricTemplate != "" {
-			deployment.Baseline.Metric[serviceName] = map[string]string{
-				"template":    metric.Provider.OPSMX.GlobalMetricTemplate,
-				"serviceGate": gateName,
-			}
-			deployment.Canary.Metric[serviceName] = map[string]string{
-				"template":    metric.Provider.OPSMX.GlobalMetricTemplate,
-				"serviceGate": gateName,
-			}
-		}
-		payload.CanaryDeployments = append(payload.CanaryDeployments, deployment)
+		err = errors.New("no services provided")
+		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
 	buffer, err := json.Marshal(payload)
@@ -519,8 +500,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["Group"] = run.Name
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
-	for k,v :=range mapHeaderPayload{
-		mapMetadata[k]=v
+	for k, v := range mapHeaderPayload {
+		mapMetadata[k] = v
 	}
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
