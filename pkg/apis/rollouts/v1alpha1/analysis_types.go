@@ -441,13 +441,15 @@ type OPSMXMetric struct {
 	Application          string         `json:"application" protobuf:"bytes,3,opt,name=application"`
 	BaselineStartTime    string         `json:"baselineStartTime,omitempty" protobuf:"bytes,4,opt,name=baselineStartTime"`
 	CanaryStartTime      string         `json:"canaryStartTime,omitempty" protobuf:"bytes,5,opt,name=canaryStartTime"`
-	LifetimeHours        string         `json:"lifetimeHours,omitempty" protobuf:"bytes,6,opt,name=lifetimeHours"`
+	LifetimeMinutes      string         `json:"lifetimeMinutes,omitempty" protobuf:"bytes,6,opt,name=lifetimeMinutes"`
 	EndTime              string         `json:"endTime,omitempty" protobuf:"bytes,7,opt,name=endTime"`
 	GlobalLogTemplate    string         `json:"globalLogTemplate,omitempty" protobuf:"bytes,8,opt,name=globalLogTemplate"`
 	GlobalMetricTemplate string         `json:"globalMetricTemplate,omitempty" protobuf:"bytes,9,opt,name=globalMetricTemplate"`
 	Threshold            OPSMXThreshold `json:"threshold" protobuf:"bytes,10,opt,name=threshold"`
-	Services             []OPSMXService `json:"services" protobuf:"bytes,11,rep,name=services"`
+	Services             []OPSMXService `json:"services,omitempty" protobuf:"bytes,11,rep,name=services"`
 	Profile              string         `json:"profile,omitempty" protobuf:"bytes,12,opt,name=profile"`
+	IntervalTime         string         `json:"intervalTime,omitempty" protobuf:"bytes,13,opt,name=intervalTime"`
+	LookBackType         string         `json:"lookBackType,omitempty" protobuf:"bytes,14,opt,name=lookBackType"`
 }
 
 type OPSMXService struct {

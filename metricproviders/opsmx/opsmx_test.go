@@ -30,7 +30,7 @@ var successfulTests = []struct {
 					Application:       "multiservice",
 					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
-					LifetimeHours:     "0.5",
+					LifetimeMinutes:   "30",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 65,
