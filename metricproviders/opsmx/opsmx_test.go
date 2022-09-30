@@ -1822,6 +1822,789 @@ func TestGenericNegativeTestsRun(t *testing.T) {
 	}
 }
 
+// Secret is not created
+func TestSecretNotCreated(t *testing.T) {
+	fakeClient := k8sfake.NewSimpleClientset()
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "secrets \"opsmx-profile\" not found", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// Secret is entered in the template
+func TestSecretEnteredInTemplate(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+	}
+	opsmxSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "new-secret-name",
+		},
+		Data: data,
+	}
+	fakeClient := k8sfake.NewSimpleClientset()
+	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, opsmxSecret, nil
+	})
+
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Profile:           "new-secret-xyz",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
+// Secret mentioned in the template is not found
+func TestSecretTemplateNotFound(t *testing.T) {
+	fakeClient := k8sfake.NewSimpleClientset()
+	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, nil, errors.New("secret not found")
+	})
+
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Profile:           "new-secret-xyz",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "secret not found", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// Source Name is not mentioned in the secret
+func TestSourceNameMissingInSecret(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "source-name is not specified in the secret", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// Gate url not in secret or in the Template
+func TestGateUrlMissing(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		// "gate-url": []byte("https://opsmx.secret.tst"),
+		"source-name": []byte("sourcename"),
+		"user":        []byte("admin"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				// GateUrl:           "https://opsmx.test.tst",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "the gate-url is not specified both in the template and in the secret", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// Gate url is picked from the secret
+func TestGateUrlPickedFromSecret(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, "https://opsmx.secret.tst/autopilot/api/v5/registerCanary", req.URL.String())
+
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+					{
+						"canaryId": 1424
+					}
+					`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Nil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
+// User is picked from the secret
+func TestUserPickedFromSecret(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("usersecret"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, "https://opsmx.secret.tst/autopilot/api/v5/registerCanary", req.URL.String())
+		assert.Equal(t, "usersecret", req.Header.Get("x-spinnaker-user"))
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+						{
+							"canaryId": 1424
+						}
+						`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Nil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
+// User is picked from the template
+func TestUserPickedFromTemplate(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("usersecret"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, "https://opsmx.secret.tst/autopilot/api/v5/registerCanary", req.URL.String())
+		assert.Equal(t, "usertemplate", req.Header.Get("x-spinnaker-user"))
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+							{
+								"canaryId": 1424
+							}
+							`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				User:              "usertemplate",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Nil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
+// User is not mentioned both in the secret as well as in the template
+func TestUserMissing(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"source-name":    []byte("sourcename"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "the user is not specified both in the template and in the secret", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// The value of CDintegration is neither True nor False
+func TestCdIntegrationValueNegative(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("xyz"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+	}
+	fakeClient := getFakeClient(data)
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+					{
+					}
+					`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "cd-integration should be either true or false", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+// Test case for when cdIntegration value is not present
+func TestCdIntegrationValueNotPresent(t *testing.T) {
+	data := map[string][]byte{
+		"source-name": []byte("sourcename"),
+		"user":        []byte("admin"),
+	}
+	fakeClient := getFakeClient(data)
+	payload := `{
+		"application": "multiservice",
+		"sourceName":"sourcename",
+		"sourceType":"argorollouts",
+		"canaryConfig": {
+				"lifetimeMinutes": "30",
+				"lookbackType": "growing",
+				"interval": "3",
+				"canaryHealthCheckHandler": {
+								"minimumCanaryResultScore": "65"
+								},
+				"canarySuccessCriteria": {
+							"canaryResultScore": "80"
+								}
+				},
+		"canaryDeployments": [
+					{
+					"canaryStartTimeMs": "1660137300000",
+					"baselineStartTimeMs": "1660137300000",
+					"canary": {
+						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-cr","template":"metricTemplate","templateVersion":"1"}
+					  }},
+					"baseline": {
+						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-br","template":"metricTemplate","templateVersion":"1"}}
+					  }
+					}
+		  ]
+	}`
+
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			panic(err)
+		}
+		bodyI := map[string]interface{}{}
+		err = json.Unmarshal(body, &bodyI)
+		if err != nil {
+			panic(err)
+		}
+		expectedBodyI := map[string]interface{}{}
+		err = json.Unmarshal([]byte(payload), &expectedBodyI)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, expectedBodyI, bodyI)
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			{
+				"canaryId": 1424
+			}
+			`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Nil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
+// Test case for when cdIntegration value is set to false
+func TestCdIntegrationValueIsFalse(t *testing.T) {
+	data := map[string][]byte{
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+		"cd-integration": []byte("false"),
+	}
+	fakeClient := getFakeClient(data)
+	payload := `{
+		"application": "multiservice",
+		"sourceName":"sourcename",
+		"sourceType":"argorollouts",
+		"canaryConfig": {
+				"lifetimeMinutes": "30",
+				"lookbackType": "growing",
+				"interval": "3",
+				"canaryHealthCheckHandler": {
+								"minimumCanaryResultScore": "65"
+								},
+				"canarySuccessCriteria": {
+							"canaryResultScore": "80"
+								}
+				},
+		"canaryDeployments": [
+					{
+					"canaryStartTimeMs": "1660137300000",
+					"baselineStartTimeMs": "1660137300000",
+					"canary": {
+						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-cr","template":"metricTemplate","templateVersion":"1"}
+					  }},
+					"baseline": {
+						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-br","template":"metricTemplate","templateVersion":"1"}}
+					  }
+					}
+		  ]
+	}`
+
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			panic(err)
+		}
+		bodyI := map[string]interface{}{}
+		err = json.Unmarshal(body, &bodyI)
+		if err != nil {
+			panic(err)
+		}
+		expectedBodyI := map[string]interface{}{}
+		err = json.Unmarshal([]byte(payload), &expectedBodyI)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, expectedBodyI, bodyI)
+		return &http.Response{
+			StatusCode: 200,
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			{
+				"canaryId": 1424
+			}
+			`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   "30",
+				LookBackType:      "growing",
+				IntervalTime:      "3",
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.Nil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+}
+
 func newAnalysisRun() *v1alpha1.AnalysisRun {
 	return &v1alpha1.AnalysisRun{}
 }

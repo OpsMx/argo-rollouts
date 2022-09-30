@@ -224,7 +224,6 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 	if metric.Provider.OPSMX.Profile != "" {
 		configMapName = metric.Provider.OPSMX.Profile
 	}
-
 	configmap, err := kubeclientset.CoreV1().Secrets(ns).Get(context.TODO(), configMapName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
