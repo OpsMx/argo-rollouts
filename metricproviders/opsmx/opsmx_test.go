@@ -12,9 +12,15 @@ import (
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tj/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	kubetesting "k8s.io/client-go/testing"
 )
 
-var successfulTests = []struct {
+
+	var successfulTests = []struct {
 	metric                v1alpha1.Metric
 	payloadRegisterCanary string
 	reportUrl             string
@@ -49,6 +55,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 					"lifetimeHours": "0.5",
 					"canaryHealthCheckHandler": {
@@ -103,6 +111,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 					"lifetimeHours": "0.5",
 					"canaryHealthCheckHandler": {
@@ -157,6 +167,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 					"lifetimeHours": "0.5",
 					"canaryHealthCheckHandler": {
@@ -217,6 +229,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `		{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -308,6 +322,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -413,6 +429,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -513,6 +531,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -613,6 +633,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -713,6 +735,8 @@ var successfulTests = []struct {
 		},
 		payloadRegisterCanary: `{
 			"application": "multiservice",
+			"sourceName":"sourcename",
+			"sourceType":"argocd",	
 			"canaryConfig": {
 			  "lifetimeHours": "0.5",
 			  "canaryHealthCheckHandler": {
@@ -963,7 +987,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -986,7 +1010,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -1017,7 +1041,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -1058,7 +1082,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -1099,7 +1123,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -1141,7 +1165,7 @@ var negativeTests = []struct {
 			Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://ds312.isd-dev.opsmx.net/",
+					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "",
@@ -1213,6 +1237,31 @@ const (
 	endpointCheckCanaryStatus = "https://opsmx.test.tst/autopilot/canaries/1424"
 )
 
+func getFakeClient(dataParam map[string][]byte) *k8sfake.Clientset {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url": []byte("https://opsmx.secret.tst"),
+		"source-name": []byte("sourcename"),
+		"user" :[]byte("admin"),
+	}
+	if len(dataParam) !=0{
+		data = dataParam
+	}
+	opsmxSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: defaultConfigMapName,
+			},
+			Data: data,
+		}
+	fakeClient := k8sfake.NewSimpleClientset()
+	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+			return true, opsmxSecret, nil
+		})
+
+		return fakeClient
+	}
+
+
 func TestRunSucessCases(t *testing.T) {
 	// Test Cases
 	for _, test := range successfulTests {
@@ -1246,7 +1295,7 @@ func TestRunSucessCases(t *testing.T) {
 				Header: make(http.Header),
 			}, nil
 		})
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
@@ -1298,7 +1347,7 @@ func TestResumeSucessCases(t *testing.T) {
 			}, nil
 		})
 
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
@@ -1355,7 +1404,7 @@ func TestResumeSucessCases(t *testing.T) {
 			}, nil
 		})
 
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
@@ -1411,7 +1460,7 @@ func TestResumeSucessCases(t *testing.T) {
 			}, nil
 		})
 
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
@@ -1467,7 +1516,7 @@ func TestResumeSucessCases(t *testing.T) {
 			}, nil
 		})
 
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
@@ -1522,7 +1571,7 @@ func TestResumeSucessCases(t *testing.T) {
 			}, nil
 		})
 
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
@@ -1588,7 +1637,7 @@ func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 		},
 	}
 
-	provider := NewOPSMXProvider(*e, c)
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
@@ -1642,7 +1691,7 @@ func TestIncorrectApplicationName(t *testing.T) {
 			},
 		},
 	}
-	provider := NewOPSMXProvider(*e, c)
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
@@ -1685,7 +1734,7 @@ func TestIncorrectGateURL(t *testing.T) {
 			},
 		},
 	}
-	provider := NewOPSMXProvider(*e, c)
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
@@ -1735,7 +1784,7 @@ func TestNoUserDefined(t *testing.T) {
 			},
 		},
 	}
-	provider := NewOPSMXProvider(*e, c)
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
 	assert.NotNil(t, measurement.FinishedAt)
@@ -1810,7 +1859,7 @@ func TestIncorrectServiceName(t *testing.T) {
 			},
 		},
 	}
-	provider := NewOPSMXProvider(*e, c)
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = "1424"
@@ -1842,7 +1891,7 @@ func TestGenericNegativeTestsRun(t *testing.T) {
 				Header: make(http.Header),
 			}, nil
 		})
-		provider := NewOPSMXProvider(*e, c)
+		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.NotNil(t, measurement.FinishedAt)
@@ -1869,3 +1918,6 @@ func NewTestClient(fn RoundTripFunc) http.Client {
 		Transport: fn,
 	}
 }
+
+
+

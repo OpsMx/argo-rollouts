@@ -48,6 +48,8 @@ type Provider struct {
 
 type jobPayload struct {
 	Application       string              `json:"application"`
+	SourceName        string              `json:"sourceName"`
+	SourceType        string              `json:"sourceType"`
 	CanaryConfig      canaryConfig        `json:"canaryConfig"`
 	CanaryDeployments []canaryDeployments `json:"canaryDeployments"`
 }
@@ -106,50 +108,32 @@ func urlJoiner(gateUrl string, paths ...string) (string, error) {
 	return u.String(), nil
 }
 
-func makeRequest(client http.Client, requestType string, url string, body string, cmData map[string]string) ([]byte, error, map[string]string) {
+func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
-	mp := map[string]string{}
 	req, err := http.NewRequest(
 		requestType,
 		url,
 		reqBody,
 	)
 	if err != nil {
-		return []byte{}, err, nil
+		return []byte{}, err
 	}
 
-	req.Header.Set("x-spinnaker-user", cmData["user"])
+	req.Header.Set("x-spinnaker-user", user)
 	req.Header.Set("Content-Type", "application/json")
-	if cdIntegration, ok := cmData["cdIntegration"]; ok {
-		req.Header.Set("X-SOURCE-TYPE", cdIntegration)
-	}
-	if source, ok := cmData["sourceName"]; ok {
-		req.Header.Set("X-SOURCE-NAME", source)
-	}
-
-	for name, values := range req.Header {
-		for _, value := range values {
-			log.Infof("Key is %s, value is %s", name, value)
-			mp[name] = value
-
-		}
-	}
-	log.Infof("Successfully created maps")
-	mp["gateUrl"] = url
-	mp["payload"] = body
 
 	res, err := client.Do(req)
 	if err != nil {
 		log.Infof("In error")
-		return []byte{}, err, mp
+		return []byte{}, err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return []byte{}, err, nil
+		return []byte{}, err
 	}
-	return data, err, mp
+	return data, err
 }
 
 // Check few conditions pre-analysis
@@ -274,7 +258,6 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 		if string(configMapCdIntegration) == "true" {
 			cdIntegration = cdIntegrationArgoCD
 		}
-		//TODO - Do not raise an error pass on a message
 		if string(configMapCdIntegration) != "true" && string(configMapCdIntegration) != "false" {
 			err := errors.New("cd-integration should be either true or false")
 			return nil, err
@@ -326,6 +309,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
+		SourceName:  configMapData["sourceName"],
+		SourceType:  configMapData["cdIntegration"],
 		CanaryConfig: canaryConfig{
 			LifetimeMinutes: lifetimeMinutes,
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
@@ -466,10 +451,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	log.Infof("Before make request")
-	data, err, mapHeaderPayload := makeRequest(p.client, "POST", canaryurl, string(buffer), configMapData)
+	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), configMapData["user"])
 	if err != nil {
-		log.Infof("In the error block")
-		newMeasurement.Metadata = mapHeaderPayload
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
@@ -498,11 +481,11 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["Group"] = run.Name
+	mapMetadata["payload"] = string(buffer)
+	mapMetadata["gateUrl"] = configMapData["gateUrl"]
+	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", configMapData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
-	for k, v := range mapHeaderPayload {
-		mapMetadata[k] = v
-	}
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -561,7 +544,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
-	data, err, _ := makeRequest(p.client, "GET", scoreURL, "", configMapData)
+	data, err := makeRequest(p.client, "GET", scoreURL, "", configMapData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
