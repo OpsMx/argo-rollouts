@@ -454,6 +454,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 
 	log.Infof("Before make request")
+	log.Infof("%s", string(buffer))
 	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), configMapData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
