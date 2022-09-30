@@ -19,8 +19,7 @@ import (
 	kubetesting "k8s.io/client-go/testing"
 )
 
-
-	var successfulTests = []struct {
+var successfulTests = []struct {
 	metric                v1alpha1.Metric
 	payloadRegisterCanary string
 	reportUrl             string
@@ -37,6 +36,8 @@ import (
 					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					LifetimeMinutes:   "30",
+					IntervalTime:      "3",
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 65,
@@ -58,7 +59,9 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-					"lifetimeHours": "0.5",
+					"lifetimeMinutes": "30",
+					"lookbackType": "growing",
+					"interval": "3",
 					"canaryHealthCheckHandler": {
 									"minimumCanaryResultScore": "65"
 									},
@@ -114,7 +117,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-					"lifetimeHours": "0.5",
+					"lifetimeMinutes": "30",
 					"canaryHealthCheckHandler": {
 									"minimumCanaryResultScore": "65"
 									},
@@ -146,7 +149,7 @@ import (
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -170,7 +173,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-					"lifetimeHours": "0.5",
+					"lifetimeMinutes": "30",
 					"canaryHealthCheckHandler": {
 									"minimumCanaryResultScore": "65"
 									},
@@ -202,7 +205,7 @@ import (
 					User:                 "admin",
 					GateUrl:              "https://opsmx.test.tst",
 					Application:          "multiservice",
-					BaselineStartTime:    "",
+					BaselineStartTime:    "2022-08-10T13:15:00Z",
 					CanaryStartTime:      "2022-08-10T13:15:00Z",
 					EndTime:              "2022-08-10T13:45:10Z",
 					GlobalMetricTemplate: "metricTemplate",
@@ -232,7 +235,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+				"lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -289,7 +292,7 @@ import (
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -325,7 +328,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+			  "lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -399,7 +402,7 @@ import (
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -432,7 +435,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+				"lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -500,7 +503,7 @@ import (
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -534,7 +537,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+				"lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -602,7 +605,7 @@ import (
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					GlobalLogTemplate: "logTemplate",
@@ -636,7 +639,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+				"lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -705,7 +708,7 @@ import (
 					User:              "admin",
 					Application:       "multiservice",
 					BaselineStartTime: "2022-08-10T13:15:00Z",
-					CanaryStartTime:   "",
+					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
@@ -738,7 +741,7 @@ import (
 			"sourceName":"sourcename",
 			"sourceType":"argocd",	
 			"canaryConfig": {
-			  "lifetimeHours": "0.5",
+				"lifetimeMinutes": "30",
 			  "canaryHealthCheckHandler": {
 				"minimumCanaryResultScore": "65"
 			  },
@@ -805,7 +808,7 @@ var negativeTests = []struct {
 	message       string
 }{
 
-	//Test case for no lifetimeHours, Baseline/Canary start time
+	//Test case for no lifetimeMinutes, Baseline/Canary start time
 	{
 		metric: v1alpha1.Metric{
 			Name: "testapp",
@@ -830,7 +833,7 @@ var negativeTests = []struct {
 			},
 		},
 		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "either provide lifetimehours or start time",
+		message:       "either provide lifetimeMinutes or end time",
 	},
 	//Test case for Pass score less than marginal
 	{
@@ -843,7 +846,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-08-02T13:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeHours:     "0.05",
+					LifetimeMinutes:   "30",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     60,
 						Marginal: 80,
@@ -873,7 +876,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-08-02T13:15:00Z",
 					CanaryStartTime:   "2022-O8-02T13:15:00Z",
-					LifetimeHours:     "0.05",
+					LifetimeMinutes:   "30",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -903,7 +906,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-O8-02T13:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeHours:     "0.05",
+					LifetimeMinutes:   "30",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -952,7 +955,7 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "parsing time \"2022-O8-02T13:15:00Z\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"O8-02T13:15:00Z\" as \"01\"",
 	},
-	//Test case for no lifetimeHours & EndTime
+	//Test case for no lifetimeMinutes & EndTime
 	{
 		metric: v1alpha1.Metric{
 			Name: "testapp",
@@ -979,7 +982,7 @@ var negativeTests = []struct {
 			},
 		},
 		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "either provide lifetimehours or end time",
+		message:       "either provide lifetimeMinutes or end time",
 	},
 	//Test case for No log & Metric analysis
 	{
@@ -990,7 +993,7 @@ var negativeTests = []struct {
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -1013,7 +1016,7 @@ var negativeTests = []struct {
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -1035,88 +1038,6 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "at least one of log or metric context must be included",
 	},
-	//Test case for missing in baseline/canary for log analysis
-	{
-		metric: v1alpha1.Metric{
-			Name: "testapp",
-			Provider: v1alpha1.MetricProvider{
-				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://opsmx.test.tst",
-					User:              "admin",
-					Application:       "multiservice",
-					BaselineStartTime: "",
-					CanaryStartTime:   "2022-08-10T13:15:00Z",
-					EndTime:           "2022-08-10T13:45:10Z",
-					Threshold: v1alpha1.OPSMXThreshold{
-						Pass:     80,
-						Marginal: 65,
-					},
-					Services: []v1alpha1.OPSMXService{
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "oes-platform-br",
-							CanaryMetricScope:    "oes-platform-cr",
-							MetricTemplateName:   "metrictemplate",
-						},
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "oes-sapor-br",
-							CanaryMetricScope:    "oes-sapor-cr",
-							MetricTemplateName:   "metrictemplate",
-							LogScopeVariables:    "kubernetes.container_name",
-							BaselineLogScope:     "",
-							CanaryLogScope:       "",
-							LogTemplateName:      "logtemplate",
-						},
-					},
-				},
-			},
-		},
-
-		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "missing baseline/canary for log analysis",
-	},
-	//Test case for missing in baseline/canary for metric analysis
-	{
-		metric: v1alpha1.Metric{
-			Name: "testapp",
-			Provider: v1alpha1.MetricProvider{
-				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://opsmx.test.tst",
-					User:              "admin",
-					Application:       "multiservice",
-					BaselineStartTime: "",
-					CanaryStartTime:   "2022-08-10T13:15:00Z",
-					EndTime:           "2022-08-10T13:45:10Z",
-					Threshold: v1alpha1.OPSMXThreshold{
-						Pass:     80,
-						Marginal: 65,
-					},
-					Services: []v1alpha1.OPSMXService{
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "",
-							CanaryMetricScope:    "",
-							MetricTemplateName:   "metrictemplate",
-						},
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "oes-sapor-br",
-							CanaryMetricScope:    "oes-sapor-cr",
-							MetricTemplateName:   "metrictemplate",
-							LogScopeVariables:    "kubernetes.container_name",
-							BaselineLogScope:     "baseline",
-							CanaryLogScope:       "canary",
-							LogTemplateName:      "logtemplate",
-						},
-					},
-				},
-			},
-		},
-
-		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "missing baseline/canary for metric analysis",
-	},
 	//Test case for mismatch in log scope variables and baseline/canary log scope
 	{
 		metric: v1alpha1.Metric{
@@ -1126,7 +1047,7 @@ var negativeTests = []struct {
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -1168,7 +1089,7 @@ var negativeTests = []struct {
 					GateUrl:           "https://opsmx.test.tst",
 					User:              "admin",
 					Application:       "multiservice",
-					BaselineStartTime: "",
+					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					EndTime:           "2022-08-10T13:45:10Z",
 					Threshold: v1alpha1.OPSMXThreshold{
@@ -1240,31 +1161,31 @@ const (
 func getFakeClient(dataParam map[string][]byte) *k8sfake.Clientset {
 	data := map[string][]byte{
 		"cd-integration": []byte("true"),
-		"gate-url": []byte("https://opsmx.secret.tst"),
-		"source-name": []byte("sourcename"),
-		"user" :[]byte("admin"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
 	}
-	if len(dataParam) !=0{
+	if len(dataParam) != 0 {
 		data = dataParam
 	}
 	opsmxSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: defaultConfigMapName,
-			},
-			Data: data,
-		}
+		ObjectMeta: metav1.ObjectMeta{
+			Name: defaultConfigMapName,
+		},
+		Data: data,
+	}
 	fakeClient := k8sfake.NewSimpleClientset()
 	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
-			return true, opsmxSecret, nil
-		})
+		return true, opsmxSecret, nil
+	})
 
-		return fakeClient
-	}
-
+	return fakeClient
+}
 
 func TestRunSucessCases(t *testing.T) {
 	// Test Cases
-	for _, test := range successfulTests {
+	for i, test := range successfulTests {
+		fmt.Println(i)
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 			assert.Equal(t, endpointRegisterCanary, req.URL.String())
@@ -1298,6 +1219,7 @@ func TestRunSucessCases(t *testing.T) {
 		provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
+		fmt.Printf(measurement.Message)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
 		assert.Equal(t, fmt.Sprintf("Report Url: %s", test.reportUrl), measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
@@ -1614,7 +1536,7 @@ func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 				GateUrl:           "https://opsmx.test.tst",
 				Application:       "multiservice",
 				User:              "admin",
-				BaselineStartTime: "",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
 				EndTime:           "2022-08-10T13:45:10Z",
 				Threshold: v1alpha1.OPSMXThreshold{
@@ -1675,7 +1597,7 @@ func TestIncorrectApplicationName(t *testing.T) {
 				User:              "admin",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeHours:     "0.05",
+				LifetimeMinutes:   "30",
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -1718,7 +1640,7 @@ func TestIncorrectGateURL(t *testing.T) {
 				User:              "admin",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeHours:     "0.05",
+				LifetimeMinutes:   "30",
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -1768,7 +1690,7 @@ func TestNoUserDefined(t *testing.T) {
 				Application:       "testapp",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeHours:     "0.05",
+				LifetimeMinutes:   "30",
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -1841,7 +1763,7 @@ func TestIncorrectServiceName(t *testing.T) {
 				GateUrl:           "https://opsmx.test.tst/",
 				User:              "admin",
 				Application:       "multiservice",
-				BaselineStartTime: "",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
 				EndTime:           "2022-08-10T13:45:10Z",
 				Threshold: v1alpha1.OPSMXThreshold{
@@ -1918,6 +1840,3 @@ func NewTestClient(fn RoundTripFunc) http.Client {
 		Transport: fn,
 	}
 }
-
-
-

@@ -7218,9 +7218,9 @@ func (m *OPSMXMetric) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.EndTime)))
 	i--
 	dAtA[i] = 0x3a
-	i -= len(m.LifetimeHours)
-	copy(dAtA[i:], m.LifetimeHours)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.LifetimeHours)))
+	i -= len(m.LifetimeMinutes)
+	copy(dAtA[i:], m.LifetimeMinutes)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.LifetimeMinutes)))
 	i--
 	dAtA[i] = 0x32
 	i -= len(m.CanaryStartTime)
@@ -10990,7 +10990,7 @@ func (m *OPSMXMetric) Size() (n int) {
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.CanaryStartTime)
 	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.LifetimeHours)
+	l = len(m.LifetimeMinutes)
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.EndTime)
 	n += 1 + l + sovGenerated(uint64(l))
@@ -12868,7 +12868,7 @@ func (this *OPSMXMetric) String() string {
 		`Application:` + fmt.Sprintf("%v", this.Application) + `,`,
 		`BaselineStartTime:` + fmt.Sprintf("%v", this.BaselineStartTime) + `,`,
 		`CanaryStartTime:` + fmt.Sprintf("%v", this.CanaryStartTime) + `,`,
-		`LifetimeHours:` + fmt.Sprintf("%v", this.LifetimeHours) + `,`,
+		`LifetimeMinutes:` + fmt.Sprintf("%v", this.LifetimeMinutes) + `,`,
 		`EndTime:` + fmt.Sprintf("%v", this.EndTime) + `,`,
 		`GlobalLogTemplate:` + fmt.Sprintf("%v", this.GlobalLogTemplate) + `,`,
 		`GlobalMetricTemplate:` + fmt.Sprintf("%v", this.GlobalMetricTemplate) + `,`,
@@ -24619,7 +24619,7 @@ func (m *OPSMXMetric) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LifetimeHours", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field LifetimeMinutes", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -24647,7 +24647,7 @@ func (m *OPSMXMetric) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.LifetimeHours = string(dAtA[iNdEx:postIndex])
+			m.LifetimeMinutes = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 7:
 			if wireType != 2 {

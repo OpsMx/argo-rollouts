@@ -56,8 +56,8 @@ type jobPayload struct {
 
 type canaryConfig struct {
 	LifetimeMinutes          string                   `json:"lifetimeMinutes"`
-	LookBackType             string                   `json:"lookbackType"`
-	IntervalTime             string                   `json:"interval"`
+	LookBackType             string                   `json:"lookbackType,omitempty"`
+	IntervalTime             string                   `json:"interval,omitempty"`
 	CanaryHealthCheckHandler canaryHealthCheckHandler `json:"canaryHealthCheckHandler"`
 	CanarySuccessCriteria    canarySuccessCriteria    `json:"canarySuccessCriteria"`
 }
@@ -147,19 +147,23 @@ func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.CanaryStartTime != metric.Provider.OPSMX.BaselineStartTime && metric.Provider.OPSMX.LifetimeMinutes == "" {
 		return errors.New("both start time should be kept same in case of using end time argument")
 	}
-	lifetimeMinutes, err := strconv.Atoi(metric.Provider.OPSMX.LifetimeMinutes)
-	if err != nil {
-		return errors.New("lifetime minutes should be in integer format")
+	if metric.Provider.OPSMX.LifetimeMinutes != "" {
+		lifetimeMinutes, err := strconv.Atoi(metric.Provider.OPSMX.LifetimeMinutes)
+		if err != nil {
+			return errors.New("lifetime minutes should be in integer format")
+		}
+		if lifetimeMinutes < 3 {
+			return errors.New("lifetime minutes cannot be less than 3 minutes")
+		}
 	}
-	intervalTime, err := strconv.Atoi(metric.Provider.OPSMX.IntervalTime)
-	if err != nil {
-		return errors.New("interval time should be in integer format")
-	}
-	if lifetimeMinutes < 3 {
-		return errors.New("lifetime minutes cannot be less than 3 minutes")
-	}
-	if intervalTime < 3 {
-		return errors.New("interval time cannot be less than 3 minutes")
+	if metric.Provider.OPSMX.IntervalTime != "" {
+		intervalTime, err := strconv.Atoi(metric.Provider.OPSMX.IntervalTime)
+		if err != nil {
+			return errors.New("interval time should be in integer format")
+		}
+		if intervalTime < 3 {
+			return errors.New("interval time cannot be less than 3 minutes")
+		}
 	}
 	return nil
 }
