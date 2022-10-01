@@ -2410,7 +2410,6 @@ func TestCdIntegrationValueNotPresent(t *testing.T) {
 	}
 	fakeClient := getFakeClient(data)
 
-
 	e := log.NewEntry(log.New())
 	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, endpointRegisterCanary, req.URL.String())

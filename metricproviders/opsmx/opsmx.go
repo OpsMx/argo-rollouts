@@ -36,7 +36,7 @@ const (
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
 	defaultConfigMapName                    = "opsmx-profile"
-	cdIntegrationArgoRollouts                    = "argorollouts"
+	cdIntegrationArgoRollouts               = "argorollouts"
 	cdIntegrationArgoCD                     = "argocd"
 )
 
@@ -265,7 +265,7 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 			cdIntegration = cdIntegrationArgoCD
 		} else if string(configMapCdIntegration) == "false" {
 			cdIntegration = cdIntegrationArgoRollouts
-		}else{
+		} else {
 			err := errors.New("cd-integration should be either true or false")
 			return nil, err
 		}
