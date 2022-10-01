@@ -2409,61 +2409,18 @@ func TestCdIntegrationValueNotPresent(t *testing.T) {
 		"user":        []byte("admin"),
 	}
 	fakeClient := getFakeClient(data)
-	payload := `{
-		"application": "multiservice",
-		"sourceName":"sourcename",
-		"sourceType":"argorollouts",
-		"canaryConfig": {
-				"lifetimeMinutes": "30",
-				"lookbackType": "growing",
-				"interval": "3",
-				"canaryHealthCheckHandler": {
-								"minimumCanaryResultScore": "65"
-								},
-				"canarySuccessCriteria": {
-							"canaryResultScore": "80"
-								}
-				},
-		"canaryDeployments": [
-					{
-					"canaryStartTimeMs": "1660137300000",
-					"baselineStartTimeMs": "1660137300000",
-					"canary": {
-						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-cr","template":"metricTemplate","templateVersion":"1"}
-					  }},
-					"baseline": {
-						"metric": {"service1":{"serviceGate":"gate1","job_name":"oes-datascience-br","template":"metricTemplate","templateVersion":"1"}}
-					  }
-					}
-		  ]
-	}`
+
 
 	e := log.NewEntry(log.New())
 	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, endpointRegisterCanary, req.URL.String())
-
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			panic(err)
-		}
-		bodyI := map[string]interface{}{}
-		err = json.Unmarshal(body, &bodyI)
-		if err != nil {
-			panic(err)
-		}
-		expectedBodyI := map[string]interface{}{}
-		err = json.Unmarshal([]byte(payload), &expectedBodyI)
-		if err != nil {
-			panic(err)
-		}
-		assert.Equal(t, expectedBodyI, bodyI)
 		return &http.Response{
 			StatusCode: 200,
+			// Send response to be tested
 			Body: ioutil.NopCloser(bytes.NewBufferString(`
-			{
-				"canaryId": 1424
-			}
-			`)),
+				{
+				}
+				`)),
 			// Must be set to non-nil value or it panics
 			Header: make(http.Header),
 		}, nil
@@ -2499,8 +2456,9 @@ func TestCdIntegrationValueNotPresent(t *testing.T) {
 	provider := NewOPSMXProvider(*e, fakeClient, c)
 	measurement := provider.Run(newAnalysisRun(), metric)
 	assert.NotNil(t, measurement.StartedAt)
-	assert.Nil(t, measurement.FinishedAt)
-	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "cd-integration is not specified in the secret", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 }
 
 // Test case for when cdIntegration value is set to false

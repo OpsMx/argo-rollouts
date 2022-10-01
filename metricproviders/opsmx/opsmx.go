@@ -36,7 +36,7 @@ const (
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
 	defaultConfigMapName                    = "opsmx-profile"
-	defaultcdIntegration                    = "argorollouts"
+	cdIntegrationArgoRollouts                    = "argorollouts"
 	cdIntegrationArgoCD                     = "argocd"
 )
 
@@ -255,13 +255,17 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 	}
 
 	//TODO - Check for yaml bool types
-	cdIntegration := defaultcdIntegration
+	var cdIntegration string
 	configMapCdIntegration, ok := configmap.Data["cd-integration"]
-	if ok {
+	if !ok {
+		err := errors.New("cd-integration is not specified in the secret")
+		return nil, err
+	} else {
 		if string(configMapCdIntegration) == "true" {
 			cdIntegration = cdIntegrationArgoCD
-		}
-		if string(configMapCdIntegration) != "true" && string(configMapCdIntegration) != "false" {
+		} else if string(configMapCdIntegration) == "false" {
+			cdIntegration = cdIntegrationArgoRollouts
+		}else{
 			err := errors.New("cd-integration should be either true or false")
 			return nil, err
 		}
