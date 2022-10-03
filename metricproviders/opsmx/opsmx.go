@@ -58,6 +58,7 @@ type canaryConfig struct {
 	LifetimeMinutes          string                   `json:"lifetimeMinutes"`
 	LookBackType             string                   `json:"lookbackType,omitempty"`
 	IntervalTime             string                   `json:"interval,omitempty"`
+	Delays                   string                   `json:"delay,omitempty"`
 	CanaryHealthCheckHandler canaryHealthCheckHandler `json:"canaryHealthCheckHandler"`
 	CanarySuccessCriteria    canarySuccessCriteria    `json:"canarySuccessCriteria"`
 }
@@ -322,6 +323,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			LifetimeMinutes: lifetimeMinutes,
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
 			IntervalTime:    metric.Provider.OPSMX.IntervalTime,
+			Delays:          metric.Provider.OPSMX.Delay,
 			CanaryHealthCheckHandler: canaryHealthCheckHandler{
 				MinimumCanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal),
 			},

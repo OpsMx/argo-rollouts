@@ -450,6 +450,7 @@ type OPSMXMetric struct {
 	Profile              string         `json:"profile,omitempty" protobuf:"bytes,12,opt,name=profile"`
 	IntervalTime         string         `json:"intervalTime,omitempty" protobuf:"bytes,13,opt,name=intervalTime"`
 	LookBackType         string         `json:"lookBackType,omitempty" protobuf:"bytes,14,opt,name=lookBackType"`
+	Delay                string         `json:"delay,omitempty" protobuf:"bytes,15,opt,name=delay"`
 }
 
 type OPSMXService struct {
