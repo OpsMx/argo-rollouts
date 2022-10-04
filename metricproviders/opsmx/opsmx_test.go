@@ -35,8 +35,8 @@ var successfulTests = []struct {
 					Application:       "multiservice",
 					BaselineStartTime: "2022-08-10T13:15:00Z",
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
-					LifetimeMinutes:   "30",
-					IntervalTime:      "3",
+					LifetimeMinutes:   30,
+					IntervalTime:      3,
 					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
@@ -846,7 +846,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-08-02T13:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "30",
+					LifetimeMinutes:   30,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     60,
 						Marginal: 80,
@@ -876,7 +876,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-08-02T13:15:00Z",
 					CanaryStartTime:   "2022-O8-02T13:15:00Z",
-					LifetimeMinutes:   "30",
+					LifetimeMinutes:   30,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -906,7 +906,7 @@ var negativeTests = []struct {
 					User:              "admin",
 					BaselineStartTime: "2022-O8-02T13:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "30",
+					LifetimeMinutes:   30,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1181,36 +1181,6 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "both start time should be kept same in case of using end time argument",
 	},
-	//Test case when lifetimeMinutes is in incoorect format
-	{
-		metric: v1alpha1.Metric{
-			Name: "testapp",
-			Provider: v1alpha1.MetricProvider{
-				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://opsmx.test.tst",
-					Application:       "testapp",
-					BaselineStartTime: "2022-08-02T14:15:00Z",
-					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "6O",
-					Threshold: v1alpha1.OPSMXThreshold{
-						Pass:     80,
-						Marginal: 60,
-					},
-					Services: []v1alpha1.OPSMXService{
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "oes-datascience-br",
-							CanaryMetricScope:    "oes-datascience-cr",
-							MetricTemplateName:   "metrictemplate",
-						},
-					},
-				},
-			},
-		},
-
-		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "lifetime minutes should be in integer format",
-	},
 	//Test case when lifetimeMinutes is less than 3 minutes
 	{
 		metric: v1alpha1.Metric{
@@ -1221,7 +1191,7 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "2",
+					LifetimeMinutes:   2,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1241,37 +1211,6 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "lifetime minutes cannot be less than 3 minutes",
 	},
-	//Test case when intervalTime is in incoorect format
-	{
-		metric: v1alpha1.Metric{
-			Name: "testapp",
-			Provider: v1alpha1.MetricProvider{
-				OPSMX: &v1alpha1.OPSMXMetric{
-					GateUrl:           "https://opsmx.test.tst",
-					Application:       "testapp",
-					BaselineStartTime: "2022-08-02T14:15:00Z",
-					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "360",
-					IntervalTime:      "6O",
-					Threshold: v1alpha1.OPSMXThreshold{
-						Pass:     80,
-						Marginal: 60,
-					},
-					Services: []v1alpha1.OPSMXService{
-						{
-							MetricScopeVariables: "job_name",
-							BaselineMetricScope:  "oes-datascience-br",
-							CanaryMetricScope:    "oes-datascience-cr",
-							MetricTemplateName:   "metrictemplate",
-						},
-					},
-				},
-			},
-		},
-
-		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "interval time should be in integer format",
-	},
 	//Test case when intervalTime is less than 3 minutes
 	{
 		metric: v1alpha1.Metric{
@@ -1282,8 +1221,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "2",
+					LifetimeMinutes:   60,
+					IntervalTime:      2,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1313,8 +1252,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "3",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1347,8 +1286,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "3",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1381,8 +1320,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "3",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1414,8 +1353,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "3",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1448,8 +1387,8 @@ var negativeTests = []struct {
 					Application:       "testapp",
 					BaselineStartTime: "2022-08-02T14:15:00Z",
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
-					LifetimeMinutes:   "60",
-					IntervalTime:      "3",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1488,7 +1427,7 @@ var nowFeature = []struct {
 					GateUrl:         "https://opsmx.test.tst",
 					User:            "admin",
 					Application:     "multiservice",
-					LifetimeMinutes: "6",
+					LifetimeMinutes: 6,
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 65,
@@ -2094,7 +2033,7 @@ func TestIncorrectApplicationName(t *testing.T) {
 				User:              "admin",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -2137,7 +2076,7 @@ func TestIncorrectGateURL(t *testing.T) {
 				User:              "admin",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -2159,6 +2098,51 @@ func TestIncorrectGateURL(t *testing.T) {
 	assert.NotNil(t, measurement.FinishedAt)
 	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 
+}
+
+func TestIncorrectScoreURL(t *testing.T) {
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 404,
+			Header:     make(http.Header),
+		}, errors.New("Post \"https://opsmx.invalidurl.tst\": dial tcp: lookup https://opsmx.invalidurl.tst: no such host")
+	})
+
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.invalidurl.tst",
+				Application:       "testapp",
+				User:              "admin",
+				BaselineStartTime: "2022-08-02T13:15:00Z",
+				CanaryStartTime:   "2022-08-02T13:15:00Z",
+				LifetimeMinutes:   30,
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 60,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables: "job_name",
+						BaselineMetricScope:  "oes-datascience-br",
+						CanaryMetricScope:    "oes-datascience-cr",
+						MetricTemplateName:   "metrictemplate",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, getFakeClient(map[string][]byte{}), c)
+	mapMetadata := make(map[string]string)
+	mapMetadata["canaryId"] = "1424"
+
+	measurement := v1alpha1.Measurement{
+		Metadata: mapMetadata,
+	}
+	measurement = provider.Resume(newAnalysisRun(), metric, measurement)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 }
 
 func TestNoUserDefined(t *testing.T) {
@@ -2187,7 +2171,7 @@ func TestNoUserDefined(t *testing.T) {
 				Application:       "testapp",
 				BaselineStartTime: "2022-08-02T13:15:00Z",
 				CanaryStartTime:   "2022-08-02T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 60,
@@ -2345,9 +2329,9 @@ func TestSecretNotCreated(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2415,9 +2399,9 @@ func TestSecretEnteredInTemplate(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2471,9 +2455,9 @@ func TestSecretTemplateNotFound(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2527,9 +2511,9 @@ func TestSourceNameMissingInSecret(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2586,9 +2570,9 @@ func TestGateUrlMissing(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2645,9 +2629,9 @@ func TestGateUrlPickedFromSecret(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2702,9 +2686,9 @@ func TestUserPickedFromSecret(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2760,9 +2744,9 @@ func TestUserPickedFromTemplate(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2815,9 +2799,9 @@ func TestUserMissing(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2872,9 +2856,9 @@ func TestCdIntegrationValueNegative(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -2930,9 +2914,9 @@ func TestCdIntegrationValueNotPresent(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,
@@ -3033,9 +3017,9 @@ func TestCdIntegrationValueIsFalse(t *testing.T) {
 				Application:       "multiservice",
 				BaselineStartTime: "2022-08-10T13:15:00Z",
 				CanaryStartTime:   "2022-08-10T13:15:00Z",
-				LifetimeMinutes:   "30",
+				LifetimeMinutes:   30,
 				LookBackType:      "growing",
-				IntervalTime:      "3",
+				IntervalTime:      3,
 				Threshold: v1alpha1.OPSMXThreshold{
 					Pass:     80,
 					Marginal: 65,

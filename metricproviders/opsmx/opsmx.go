@@ -111,14 +111,11 @@ func urlJoiner(gateUrl string, paths ...string) (string, error) {
 
 func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
-	req, err := http.NewRequest(
+	req, _ := http.NewRequest(
 		requestType,
 		url,
 		reqBody,
 	)
-	if err != nil {
-		return []byte{}, err
-	}
 
 	req.Header.Set("x-spinnaker-user", user)
 	req.Header.Set("Content-Type", "application/json")
@@ -142,35 +139,23 @@ func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.Threshold.Pass <= metric.Provider.OPSMX.Threshold.Marginal {
 		return errors.New("pass score cannot be less than marginal score")
 	}
-	if metric.Provider.OPSMX.LifetimeMinutes == "" && metric.Provider.OPSMX.EndTime == "" {
+	if metric.Provider.OPSMX.LifetimeMinutes == 0 && metric.Provider.OPSMX.EndTime == "" {
 		return errors.New("either provide lifetimeMinutes or end time")
 	}
-	if metric.Provider.OPSMX.CanaryStartTime != metric.Provider.OPSMX.BaselineStartTime && metric.Provider.OPSMX.LifetimeMinutes == "" {
+	if metric.Provider.OPSMX.CanaryStartTime != metric.Provider.OPSMX.BaselineStartTime && metric.Provider.OPSMX.LifetimeMinutes == 0 {
 		return errors.New("both start time should be kept same in case of using end time argument")
 	}
-	if metric.Provider.OPSMX.LifetimeMinutes != "" {
-		lifetimeMinutes, err := strconv.Atoi(metric.Provider.OPSMX.LifetimeMinutes)
-		if err != nil {
-			return errors.New("lifetime minutes should be in integer format")
-		}
-		if lifetimeMinutes < 3 {
-			return errors.New("lifetime minutes cannot be less than 3 minutes")
-		}
+	if metric.Provider.OPSMX.LifetimeMinutes != 0 && metric.Provider.OPSMX.LifetimeMinutes < 3 {
+		return errors.New("lifetime minutes cannot be less than 3 minutes")
 	}
-	if metric.Provider.OPSMX.IntervalTime != "" {
-		intervalTime, err := strconv.Atoi(metric.Provider.OPSMX.IntervalTime)
-		if err != nil {
-			return errors.New("interval time should be in integer format")
-		}
-		if intervalTime < 3 {
-			return errors.New("interval time cannot be less than 3 minutes")
-		}
+	if metric.Provider.OPSMX.IntervalTime != 0 && metric.Provider.OPSMX.IntervalTime < 3 {
+		return errors.New("interval time cannot be less than 3 minutes")
 	}
 	return nil
 }
 
 // Return epoch values of the specific time provided along with lifetimeMinutes for the Run
-func getTimeVariables(baselineTime string, canaryTime string, endTime string, lifetimeMinutes string) (string, string, string, error) {
+func getTimeVariables(baselineTime string, canaryTime string, endTime string, lifetimeMinutes int64) (string, string, int64, error) {
 
 	var canaryStartTime string
 	var baselineStartTime string
@@ -181,7 +166,7 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 	} else {
 		tsStart, err := time.Parse(time.RFC3339, canaryTime)
 		if err != nil {
-			return "", "", "", err
+			return "", "", 0, err
 		}
 		canaryStartTime = fmt.Sprintf("%d", tsStart.UnixNano()/int64(time.Millisecond))
 	}
@@ -191,20 +176,20 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 	} else {
 		tsStart, err := time.Parse(time.RFC3339, baselineTime)
 		if err != nil {
-			return "", "", "", err
+			return "", "", 0, err
 		}
 		baselineStartTime = fmt.Sprintf("%d", tsStart.UnixNano()/int64(time.Millisecond))
 	}
 
 	//If lifetimeMinutes not given calculate using endTime
-	if lifetimeMinutes == "" {
+	if lifetimeMinutes == 0 {
 		tsEnd, err := time.Parse(time.RFC3339, endTime)
 		if err != nil {
-			return "", "", "", err
+			return "", "", 0, err
 		}
 		if canaryTime != "" && canaryTime > endTime {
 			err := errors.New("start time cannot be greater than end time")
-			return "", "", "", err
+			return "", "", 0, err
 		}
 		tsStart := tm
 		if canaryTime != "" {
@@ -212,7 +197,7 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 		}
 		tsDifference := tsEnd.Sub(tsStart)
 		min, _ := time.ParseDuration(tsDifference.String())
-		lifetimeMinutes = fmt.Sprintf("%v", roundFloat(min.Minutes(), 0))
+		lifetimeMinutes = int64(roundFloat(min.Minutes(), 0))
 	}
 	return canaryStartTime, baselineStartTime, lifetimeMinutes, nil
 }
@@ -320,9 +305,9 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		SourceName:  secretData["sourceName"],
 		SourceType:  secretData["cdIntegration"],
 		CanaryConfig: canaryConfig{
-			LifetimeMinutes: lifetimeMinutes,
+			LifetimeMinutes: fmt.Sprintf("%d", lifetimeMinutes),
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
-			IntervalTime:    metric.Provider.OPSMX.IntervalTime,
+			IntervalTime:    fmt.Sprintf("%d", metric.Provider.OPSMX.IntervalTime),
 			Delays:          metric.Provider.OPSMX.Delay,
 			CanaryHealthCheckHandler: canaryHealthCheckHandler{
 				MinimumCanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal),
