@@ -35,7 +35,7 @@ const (
 	reportUrlFormat                         = `ui/application/deploymentverification/`
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
-	defaultConfigMapName                    = "opsmx-profile"
+	defaultSecretName                       = "opsmx-profile"
 	cdIntegrationArgoRollouts               = "argorollouts"
 	cdIntegrationArgoCD                     = "argocd"
 )
@@ -217,70 +217,70 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 	return canaryStartTime, baselineStartTime, lifetimeMinutes, nil
 }
 
-func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
+func getDataSecret(metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
 	//TODO - Refactor
 	ns := defaults.Namespace()
-	cmData := map[string]string{}
-	configMapName := defaultConfigMapName
+	secretData := map[string]string{}
+	secretName := defaultSecretName
 	if metric.Provider.OPSMX.Profile != "" {
-		configMapName = metric.Provider.OPSMX.Profile
+		secretName = metric.Provider.OPSMX.Profile
 	}
-	configmap, err := kubeclientset.CoreV1().Secrets(ns).Get(context.TODO(), configMapName, metav1.GetOptions{})
+	secret, err := kubeclientset.CoreV1().Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	gateUrl := metric.Provider.OPSMX.GateUrl
 	if gateUrl == "" {
-		configmapGateurl, ok := configmap.Data["gate-url"]
+		secretGateurl, ok := secret.Data["gate-url"]
 		if !ok {
 			err := errors.New("the gate-url is not specified both in the template and in the secret")
 			return nil, err
 		}
-		gateUrl = string(configmapGateurl)
+		gateUrl = string(secretGateurl)
 	}
-	cmData["gateUrl"] = gateUrl
+	secretData["gateUrl"] = gateUrl
 
 	user := metric.Provider.OPSMX.User
 	if user == "" {
-		configmapUser, ok := configmap.Data["user"]
+		secretUser, ok := secret.Data["user"]
 		if !ok {
 			err := errors.New("the user is not specified both in the template and in the secret")
 			return nil, err
 		}
-		user = string(configmapUser)
+		user = string(secretUser)
 	}
-	cmData["user"] = user
+	secretData["user"] = user
 
 	if !isRun {
-		return cmData, nil
+		return secretData, nil
 	}
 
 	//TODO - Check for yaml bool types
 	var cdIntegration string
-	configMapCdIntegration, ok := configmap.Data["cd-integration"]
+	secretCdIntegration, ok := secret.Data["cd-integration"]
 	if !ok {
 		err := errors.New("cd-integration is not specified in the secret")
 		return nil, err
 	} else {
-		if string(configMapCdIntegration) == "true" {
+		if string(secretCdIntegration) == "true" {
 			cdIntegration = cdIntegrationArgoCD
-		} else if string(configMapCdIntegration) == "false" {
+		} else if string(secretCdIntegration) == "false" {
 			cdIntegration = cdIntegrationArgoRollouts
 		} else {
 			err := errors.New("cd-integration should be either true or false")
 			return nil, err
 		}
 	}
-	cmData["cdIntegration"] = cdIntegration
+	secretData["cdIntegration"] = cdIntegration
 
-	configmapSourceName, ok := configmap.Data["source-name"]
+	secretSourceName, ok := secret.Data["source-name"]
 	if !ok {
 		err := errors.New("source-name is not specified in the secret")
 		return nil, err
 	}
-	cmData["sourceName"] = string(configmapSourceName)
+	secretData["sourceName"] = string(secretSourceName)
 
-	return cmData, nil
+	return secretData, nil
 }
 
 // Run queries opsmx for the metric
@@ -289,16 +289,16 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
-	log.Infof("Before getDataConfigMap")
-	configMapData, err := getDataConfigMap(metric, p.kubeclientset, true)
+	log.Infof("Before getDataSecret")
+	secretData, err := getDataSecret(metric, p.kubeclientset, true)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("%s", configMapData)
-	log.Infof("After getDataConfigMap")
+	log.Infof("%s", secretData)
+	log.Infof("After getDataSecret")
 
 	//develop Canary Register Url
-	canaryurl, err := urlJoiner(configMapData["gateUrl"], v5configIdLookupURLFormat)
+	canaryurl, err := urlJoiner(secretData["gateUrl"], v5configIdLookupURLFormat)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -317,8 +317,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
-		SourceName:  configMapData["sourceName"],
-		SourceType:  configMapData["cdIntegration"],
+		SourceName:  secretData["sourceName"],
+		SourceType:  secretData["cdIntegration"],
 		CanaryConfig: canaryConfig{
 			LifetimeMinutes: lifetimeMinutes,
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
@@ -458,7 +458,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	log.Infof("Before make request")
 	log.Infof("%s", string(buffer))
-	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), configMapData["user"])
+	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -481,13 +481,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	//Develop the Report URL
 	stringifiedCanaryId := string(canary.CanaryId)
-	reportUrl, _ := urlJoiner(configMapData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
+	reportUrl, _ := urlJoiner(secretData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["Group"] = run.Name
 	mapMetadata["payload"] = string(buffer)
-	mapMetadata["gateUrl"] = configMapData["gateUrl"]
-	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", configMapData)
+	mapMetadata["gateUrl"] = secretData["gateUrl"]
+	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
@@ -537,15 +537,15 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	configMapData, err := getDataConfigMap(metric, p.kubeclientset, false)
+	secretData, err := getDataSecret(metric, p.kubeclientset, false)
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 
 	canaryId := measurement.Metadata["canaryId"]
-	scoreURL, _ := urlJoiner(configMapData["gateUrl"], scoreUrlFormat, canaryId)
+	scoreURL, _ := urlJoiner(secretData["gateUrl"], scoreUrlFormat, canaryId)
 
-	data, err := makeRequest(p.client, "GET", scoreURL, "", configMapData["user"])
+	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}

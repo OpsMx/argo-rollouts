@@ -1536,7 +1536,7 @@ func getFakeClient(dataParam map[string][]byte) *k8sfake.Clientset {
 	}
 	opsmxSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: defaultConfigMapName,
+			Name: defaultSecretName,
 		},
 		Data: data,
 	}
