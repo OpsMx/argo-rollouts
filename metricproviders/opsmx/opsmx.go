@@ -298,6 +298,12 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
+	var intervalTime string
+	if metric.Provider.OPSMX.IntervalTime != 0 {
+		intervalTime = fmt.Sprintf("%d", metric.Provider.OPSMX.IntervalTime)
+	} else {
+		intervalTime = ""
+	}
 
 	//Generate the payload
 	payload := jobPayload{
@@ -307,7 +313,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		CanaryConfig: canaryConfig{
 			LifetimeMinutes: fmt.Sprintf("%d", lifetimeMinutes),
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
-			IntervalTime:    fmt.Sprintf("%d", metric.Provider.OPSMX.IntervalTime),
+			IntervalTime:    intervalTime,
 			Delays:          metric.Provider.OPSMX.Delay,
 			CanaryHealthCheckHandler: canaryHealthCheckHandler{
 				MinimumCanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal),
