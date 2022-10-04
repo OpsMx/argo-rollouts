@@ -4192,10 +4192,12 @@
                                                         "type": "string"
                                                     },
                                                     "intervalTime": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lifetimeMinutes": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lookBackType": {
                                                         "type": "string"
@@ -8562,10 +8564,12 @@
                                                         "type": "string"
                                                     },
                                                     "intervalTime": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lifetimeMinutes": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lookBackType": {
                                                         "type": "string"
@@ -12932,10 +12936,12 @@
                                                         "type": "string"
                                                     },
                                                     "intervalTime": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lifetimeMinutes": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "lookBackType": {
                                                         "type": "string"
