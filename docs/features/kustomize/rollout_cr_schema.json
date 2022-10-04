@@ -4176,6 +4176,9 @@
                                                     "canaryStartTime": {
                                                         "type": "string"
                                                     },
+                                                    "delay": {
+                                                        "type": "string"
+                                                    },
                                                     "endTime": {
                                                         "type": "string"
                                                     },
@@ -4188,7 +4191,16 @@
                                                     "globalMetricTemplate": {
                                                         "type": "string"
                                                     },
-                                                    "lifetimeHours": {
+                                                    "intervalTime": {
+                                                        "type": "string"
+                                                    },
+                                                    "lifetimeMinutes": {
+                                                        "type": "string"
+                                                    },
+                                                    "lookBackType": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile": {
                                                         "type": "string"
                                                     },
                                                     "services": {
@@ -4255,10 +4267,7 @@
                                                 },
                                                 "required": [
                                                     "application",
-                                                    "gateUrl",
-                                                    "services",
-                                                    "threshold",
-                                                    "user"
+                                                    "threshold"
                                                 ],
                                                 "type": "object"
                                             },
@@ -8537,6 +8546,9 @@
                                                     "canaryStartTime": {
                                                         "type": "string"
                                                     },
+                                                    "delay": {
+                                                        "type": "string"
+                                                    },
                                                     "endTime": {
                                                         "type": "string"
                                                     },
@@ -8549,7 +8561,16 @@
                                                     "globalMetricTemplate": {
                                                         "type": "string"
                                                     },
-                                                    "lifetimeHours": {
+                                                    "intervalTime": {
+                                                        "type": "string"
+                                                    },
+                                                    "lifetimeMinutes": {
+                                                        "type": "string"
+                                                    },
+                                                    "lookBackType": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile": {
                                                         "type": "string"
                                                     },
                                                     "services": {
@@ -8616,10 +8637,7 @@
                                                 },
                                                 "required": [
                                                     "application",
-                                                    "gateUrl",
-                                                    "services",
-                                                    "threshold",
-                                                    "user"
+                                                    "threshold"
                                                 ],
                                                 "type": "object"
                                             },
@@ -12898,6 +12916,9 @@
                                                     "canaryStartTime": {
                                                         "type": "string"
                                                     },
+                                                    "delay": {
+                                                        "type": "string"
+                                                    },
                                                     "endTime": {
                                                         "type": "string"
                                                     },
@@ -12910,7 +12931,16 @@
                                                     "globalMetricTemplate": {
                                                         "type": "string"
                                                     },
-                                                    "lifetimeHours": {
+                                                    "intervalTime": {
+                                                        "type": "string"
+                                                    },
+                                                    "lifetimeMinutes": {
+                                                        "type": "string"
+                                                    },
+                                                    "lookBackType": {
+                                                        "type": "string"
+                                                    },
+                                                    "profile": {
                                                         "type": "string"
                                                     },
                                                     "services": {
@@ -12977,10 +13007,7 @@
                                                 },
                                                 "required": [
                                                     "application",
-                                                    "gateUrl",
-                                                    "services",
-                                                    "threshold",
-                                                    "user"
+                                                    "threshold"
                                                 ],
                                                 "type": "object"
                                             },

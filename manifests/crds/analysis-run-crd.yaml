@@ -2708,6 +2708,8 @@ spec:
                               type: string
                             canaryStartTime:
                               type: string
+                            delay:
+                              type: string
                             endTime:
                               type: string
                             gateUrl:
@@ -2716,7 +2718,13 @@ spec:
                               type: string
                             globalMetricTemplate:
                               type: string
-                            lifetimeHours:
+                            intervalTime:
+                              type: string
+                            lifetimeMinutes:
+                              type: string
+                            lookBackType:
+                              type: string
+                            profile:
                               type: string
                             services:
                               items:
@@ -2761,10 +2769,7 @@ spec:
                               type: string
                           required:
                           - application
-                          - gateUrl
-                          - services
                           - threshold
-                          - user
                           type: object
                         prometheus:
                           properties:
