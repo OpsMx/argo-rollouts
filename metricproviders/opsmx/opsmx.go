@@ -251,7 +251,7 @@ func getDataConfigMap(metric v1alpha1.Metric, kubeclientset kubernetes.Interface
 	}
 	cmData["user"] = user
 
-	if isRun == false {
+	if !isRun {
 		return cmData, nil
 	}
 
@@ -454,10 +454,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	buffer, err := json.Marshal(payload)
-	if err != nil {
-		return metricutil.MarkMeasurementError(newMeasurement, err)
-	}
+	buffer, _ := json.Marshal(payload)
 
 	log.Infof("Before make request")
 	log.Infof("%s", string(buffer))
@@ -484,10 +481,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	//Develop the Report URL
 	stringifiedCanaryId := string(canary.CanaryId)
-	reportUrl, err := urlJoiner(configMapData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
-	if err != nil {
-		return metricutil.MarkMeasurementError(newMeasurement, err)
-	}
+	reportUrl, _ := urlJoiner(configMapData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["Group"] = run.Name
@@ -549,10 +543,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	}
 
 	canaryId := measurement.Metadata["canaryId"]
-	scoreURL, err := urlJoiner(configMapData["gateUrl"], scoreUrlFormat, canaryId)
-	if err != nil {
-		return metricutil.MarkMeasurementError(measurement, err)
-	}
+	scoreURL, _ := urlJoiner(configMapData["gateUrl"], scoreUrlFormat, canaryId)
 
 	data, err := makeRequest(p.client, "GET", scoreURL, "", configMapData["user"])
 	if err != nil {
