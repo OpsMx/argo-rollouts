@@ -37,6 +37,7 @@ var successfulTests = []struct {
 					CanaryStartTime:   "2022-08-10T13:15:00Z",
 					LifetimeMinutes:   30,
 					IntervalTime:      3,
+					Delay:             1,
 					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
@@ -62,6 +63,7 @@ var successfulTests = []struct {
 					"lifetimeMinutes": "30",
 					"lookbackType": "growing",
 					"interval": "3",
+					"delay": "1",
 					"canaryHealthCheckHandler": {
 									"minimumCanaryResultScore": "65"
 									},

@@ -2710,7 +2710,8 @@ spec:
                             canaryStartTime:
                               type: string
                             delay:
-                              type: string
+                              format: int64
+                              type: integer
                             endTime:
                               type: string
                             gateUrl:
@@ -5657,7 +5658,8 @@ spec:
                             canaryStartTime:
                               type: string
                             delay:
-                              type: string
+                              format: int64
+                              type: integer
                             endTime:
                               type: string
                             gateUrl:
@@ -8490,7 +8492,8 @@ spec:
                             canaryStartTime:
                               type: string
                             delay:
-                              type: string
+                              format: int64
+                              type: integer
                             endTime:
                               type: string
                             gateUrl:

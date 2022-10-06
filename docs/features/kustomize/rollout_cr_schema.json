@@ -4177,7 +4177,8 @@
                                                         "type": "string"
                                                     },
                                                     "delay": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "endTime": {
                                                         "type": "string"
@@ -8549,7 +8550,8 @@
                                                         "type": "string"
                                                     },
                                                     "delay": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "endTime": {
                                                         "type": "string"
@@ -12921,7 +12923,8 @@
                                                         "type": "string"
                                                     },
                                                     "delay": {
-                                                        "type": "string"
+                                                        "format": "int64",
+                                                        "type": "integer"
                                                     },
                                                     "endTime": {
                                                         "type": "string"

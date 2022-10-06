@@ -305,6 +305,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		intervalTime = ""
 	}
 
+	var opsmxdelay string
+	if metric.Provider.OPSMX.Delay != 0 {
+		opsmxdelay = fmt.Sprintf("%d", metric.Provider.OPSMX.Delay)
+	} else {
+		opsmxdelay = ""
+	}
+
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
@@ -314,7 +321,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			LifetimeMinutes: fmt.Sprintf("%d", lifetimeMinutes),
 			LookBackType:    metric.Provider.OPSMX.LookBackType,
 			IntervalTime:    intervalTime,
-			Delays:          metric.Provider.OPSMX.Delay,
+			Delays:          opsmxdelay,
 			CanaryHealthCheckHandler: canaryHealthCheckHandler{
 				MinimumCanaryResultScore: fmt.Sprintf("%d", metric.Provider.OPSMX.Threshold.Marginal),
 			},
