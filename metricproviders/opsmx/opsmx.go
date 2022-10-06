@@ -452,7 +452,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	buffer, _ := json.Marshal(payload)
+	buffer, err := json.Marshal(payload)
+	if err != nil {
+		return metricutil.MarkMeasurementError(newMeasurement, err)
+	}
 
 	log.Infof("Before make request")
 	log.Infof("%s", string(buffer))
