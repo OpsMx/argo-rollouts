@@ -61,7 +61,7 @@ var successfulTests = []struct {
 			"sourceType":"argocd",
 			"canaryConfig": {
 					"lifetimeMinutes": "30",
-					"lookbackType": "growing",
+					"lookBackType": "growing",
 					"interval": "3",
 					"delay": "1",
 					"canaryHealthCheckHandler": {
@@ -1378,6 +1378,199 @@ var negativeTests = []struct {
 
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "provide either a service specific metric template or global metric template",
+	},
+	//Test case when global and service specific template is missing
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							BaselineLogScope:     "oes-datascienece-br",
+							CanaryLogScope:       "oes-datascience-cr",
+							LogTemplateName:      "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing log Scope placeholder for the provided baseline/canary",
+	},
+	//Test case when global and service specific template is missing
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							CanaryLogScope:       "oes-datascience-cr",
+							LogTemplateName:      "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing log Scope placeholder for the provided baseline/canary",
+	},
+	//Test case when global and service specific template is missing
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							BaselineLogScope:     "oes-datascienece-br",
+							LogTemplateName:      "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing log Scope placeholder for the provided baseline/canary",
+	},
+	//Test case when global and service specific template is missing
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							BaselineMetricScope: "oes-sapor-br",
+							CanaryMetricScope:   "oes-sapor-cr",
+							LogScopeVariables:   "kubernetes.container_name",
+							BaselineLogScope:    "oes-datascienece-br",
+							CanaryLogScope:      "oes-datascience-cr",
+							LogTemplateName:     "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing metric Scope placeholder for the provided baseline/canary",
+	},
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							CanaryMetricScope: "oes-sapor-cr",
+							LogScopeVariables: "kubernetes.container_name",
+							BaselineLogScope:  "oes-datascienece-br",
+							CanaryLogScope:    "oes-datascience-cr",
+							LogTemplateName:   "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing metric Scope placeholder for the provided baseline/canary",
+	},
+	//Test case when global and service specific template is missing
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							BaselineMetricScope: "oes-sapor-br",
+							LogScopeVariables:   "kubernetes.container_name",
+							BaselineLogScope:    "oes-datascienece-br",
+							CanaryLogScope:      "oes-datascience-cr",
+							LogTemplateName:     "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "missing metric Scope placeholder for the provided baseline/canary",
 	},
 	//Test case when improper URL
 	{
@@ -2957,7 +3150,7 @@ func TestCdIntegrationValueIsFalse(t *testing.T) {
 		"sourceType":"argorollouts",
 		"canaryConfig": {
 				"lifetimeMinutes": "30",
-				"lookbackType": "growing",
+				"lookBackType": "growing",
 				"interval": "3",
 				"canaryHealthCheckHandler": {
 								"minimumCanaryResultScore": "65"

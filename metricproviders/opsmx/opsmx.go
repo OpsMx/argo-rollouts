@@ -56,7 +56,7 @@ type jobPayload struct {
 
 type canaryConfig struct {
 	LifetimeMinutes          string                   `json:"lifetimeMinutes"`
-	LookBackType             string                   `json:"lookbackType,omitempty"`
+	LookBackType             string                   `json:"lookBackType,omitempty"`
 	IntervalTime             string                   `json:"interval,omitempty"`
 	Delays                   string                   `json:"delay,omitempty"`
 	CanaryHealthCheckHandler canaryHealthCheckHandler `json:"canaryHealthCheckHandler"`
@@ -352,6 +352,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				serviceName = item.ServiceName
 			}
 			gateName := fmt.Sprintf("gate%d", i+1)
+			if item.LogScopeVariables == "" && item.BaselineLogScope != "" || item.LogScopeVariables == "" && item.CanaryLogScope != "" {
+				err := errors.New("missing log Scope placeholder for the provided baseline/canary")
+				return metricutil.MarkMeasurementError(newMeasurement, err)
+			}
 			//For Log Analysis is to be added in analysis-run
 			if item.LogScopeVariables != "" {
 				//Check if no baseline or canary
@@ -396,6 +400,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				valid = true
 			}
 
+			if item.MetricScopeVariables == "" && item.BaselineMetricScope != "" || item.MetricScopeVariables == "" && item.CanaryMetricScope != "" {
+				err := errors.New("missing metric Scope placeholder for the provided baseline/canary")
+				return metricutil.MarkMeasurementError(newMeasurement, err)
+			}
 			//For metric analysis is to be added in analysis-run
 			if item.MetricScopeVariables != "" {
 				//Check if no baseline or canary
