@@ -109,7 +109,7 @@ func urlJoiner(gateUrl string, paths ...string) (string, error) {
 	return u.String(), nil
 }
 
-func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
+func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, string, error) {
 	reqBody := strings.NewReader(body)
 	req, _ := http.NewRequest(
 		requestType,
@@ -123,15 +123,19 @@ func makeRequest(client http.Client, requestType string, url string, body string
 	res, err := client.Do(req)
 	if err != nil {
 		log.Infof("In error")
-		return []byte{}, err
+		return []byte{}, "", err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, "", err
 	}
-	return data, err
+	var urlScore string
+	if requestType == "POST" {
+		urlScore = res.Header.Get("Location")
+	}
+	return data, urlScore, err
 }
 
 // Check few conditions pre-analysis
@@ -467,7 +471,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	log.Infof("Before make request")
 	log.Infof("%s", string(buffer))
-	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
+	data, urlScore, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -496,6 +500,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["Group"] = run.Name
 	mapMetadata["payload"] = string(buffer)
 	mapMetadata["gateUrl"] = secretData["gateUrl"]
+	mapMetadata["scoreUrl"] = urlScore
 	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
@@ -551,7 +556,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	canaryId := measurement.Metadata["canaryId"]
 	scoreURL, _ := urlJoiner(secretData["gateUrl"], scoreUrlFormat, canaryId)
 
-	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
+	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
