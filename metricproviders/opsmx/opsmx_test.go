@@ -1728,7 +1728,6 @@ func TestResumeSucessCases(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -1785,7 +1784,6 @@ func TestResumeSucessCases(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -1841,7 +1839,6 @@ func TestResumeSucessCases(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -1897,7 +1894,6 @@ func TestResumeSucessCases(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -1952,7 +1948,6 @@ func TestResumeSucessCases(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -2147,7 +2142,6 @@ func TestInvalidJson(t *testing.T) {
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-			assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 			return &http.Response{
 				StatusCode: 200,
@@ -2337,6 +2331,9 @@ func TestIncorrectScoreURL(t *testing.T) {
 	}
 	measurement = provider.Resume(newAnalysisRun(), metric, measurement)
 	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+	fmt.Printf("\n\n")
+	fmt.Printf("ScoreUrl:%s", measurement.Metadata["scoreUrl"])
+	fmt.Printf("\n\n")
 }
 
 func TestNoUserDefined(t *testing.T) {
@@ -2393,7 +2390,6 @@ func TestNoUserDefined(t *testing.T) {
 func TestIncorrectServiceName(t *testing.T) {
 	e := log.NewEntry(log.New())
 	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
-		assert.Equal(t, endpointCheckCanaryStatus, req.URL.String())
 
 		return &http.Response{
 			StatusCode: 200,

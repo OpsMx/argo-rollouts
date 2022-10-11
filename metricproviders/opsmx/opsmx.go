@@ -31,14 +31,14 @@ import (
 const (
 	ProviderType                            = "opsmx"
 	v5configIdLookupURLFormat               = `/autopilot/api/v5/registerCanary`
-	scoreUrlFormat                          = `/autopilot/canaries/`
-	reportUrlFormat                         = `ui/application/deploymentverification/`
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
 	defaultSecretName                       = "opsmx-profile"
 	cdIntegrationArgoRollouts               = "argorollouts"
 	cdIntegrationArgoCD                     = "argocd"
 )
+
+var scoreUrl string
 
 type Provider struct {
 	logCtx        log.Entry
@@ -475,7 +475,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
+	scoreUrl = urlScore
 	//Struct to record canary Response
 	type canaryResponse struct {
 		Error    string      `json:"error,omitempty"`
@@ -499,7 +499,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["Group"] = run.Name
 	mapMetadata["payload"] = string(buffer)
 	mapMetadata["gateUrl"] = secretData["gateUrl"]
-	mapMetadata["scoreUrl"] = urlScore
 	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
@@ -551,10 +550,7 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
 
-	canaryId := measurement.Metadata["canaryId"]
-	scoreURL, _ := urlJoiner(secretData["gateUrl"], scoreUrlFormat, canaryId)
-
-	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
+	data, _, err := makeRequest(p.client, "GET", scoreUrl, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
