@@ -494,7 +494,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	//Develop the Report URL
 	stringifiedCanaryId := string(canary.CanaryId)
-	reportUrl, _ := urlJoiner(secretData["gateUrl"], reportUrlFormat, metric.Provider.OPSMX.Application, stringifiedCanaryId)
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["Group"] = run.Name
@@ -503,7 +502,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["scoreUrl"] = urlScore
 	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
-	mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", reportUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -564,6 +562,12 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(data, &status)
 	a, _ := json.MarshalIndent(status["status"], "", "   ")
 	json.Unmarshal(a, &status)
+
+	var reportUrlJson map[string]interface{}
+	jsonBytes, _ := json.MarshalIndent(status["canaryResult"], "", "   ")
+	json.Unmarshal(jsonBytes, &reportUrlJson)
+	reportUrl := reportUrlJson["canaryReportURL"]
+	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
 	//if the status is Running, resume analysis after delay
 	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))

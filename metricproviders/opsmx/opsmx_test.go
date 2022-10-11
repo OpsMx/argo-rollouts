@@ -84,7 +84,7 @@ var successfulTests = []struct {
 						}
 			  ]
 		}`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for endtime function of Single Service feature
 	{
@@ -140,7 +140,7 @@ var successfulTests = []struct {
 						}
 			  ]
 		}`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for only 1 time stamp given function of Single Service feature
 	{
@@ -196,7 +196,7 @@ var successfulTests = []struct {
 						}
 			  ]
 		}`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for multi-service feature
 	{
@@ -282,7 +282,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 
 	//Test case for multi-service feature along with logs+metrics analysis
@@ -393,7 +393,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for 1 incorrect service and one correct
 	{
@@ -494,7 +494,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for Service Name given
 	{
@@ -596,7 +596,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for Global log Template
 	{
@@ -698,7 +698,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 	//Test case for CanaryStartTime not given but baseline was given
 	{
@@ -800,7 +800,7 @@ var successfulTests = []struct {
 			  }
 			]
 		  }`,
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 }
 
@@ -1649,7 +1649,7 @@ var nowFeature = []struct {
 				},
 			},
 		},
-		reportUrl: "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424",
+		reportUrl: "",
 	},
 }
 
@@ -1719,7 +1719,6 @@ func TestRunSucessCases(t *testing.T) {
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
-		assert.Equal(t, fmt.Sprintf("Report Url: %s", test.reportUrl), measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 	}
 }
@@ -1771,7 +1770,6 @@ func TestResumeSucessCases(t *testing.T) {
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
-		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
 
 		measurement := v1alpha1.Measurement{
 			Metadata: mapMetadata,
@@ -1780,6 +1778,7 @@ func TestResumeSucessCases(t *testing.T) {
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, "100", measurement.Value)
 		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseSuccessful, measurement.Phase)
 	}
 
@@ -1828,7 +1827,6 @@ func TestResumeSucessCases(t *testing.T) {
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
-		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
 
 		measurement := v1alpha1.Measurement{
 			Metadata: mapMetadata,
@@ -1837,6 +1835,7 @@ func TestResumeSucessCases(t *testing.T) {
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, "0", measurement.Value)
 		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseFailed, measurement.Phase)
 	}
 	for _, test := range successfulTests {
@@ -1884,7 +1883,6 @@ func TestResumeSucessCases(t *testing.T) {
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
-		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
 
 		measurement := v1alpha1.Measurement{
 			Metadata: mapMetadata,
@@ -1893,6 +1891,7 @@ func TestResumeSucessCases(t *testing.T) {
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, "75", measurement.Value)
 		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseInconclusive, measurement.Phase)
 	}
 	for _, test := range successfulTests {
@@ -1940,7 +1939,6 @@ func TestResumeSucessCases(t *testing.T) {
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
-		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
 
 		measurement := v1alpha1.Measurement{
 			Metadata: mapMetadata,
@@ -1948,6 +1946,7 @@ func TestResumeSucessCases(t *testing.T) {
 		}
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		assert.NotNil(t, measurement.FinishedAt)
+		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseFailed, measurement.Phase)
 	}
 	for _, test := range successfulTests {
@@ -1995,7 +1994,6 @@ func TestResumeSucessCases(t *testing.T) {
 
 		mapMetadata := make(map[string]string)
 		mapMetadata["canaryId"] = "1424"
-		mapMetadata["reportUrl"] = fmt.Sprintf("Report Url: %s", test.reportUrl)
 
 		measurement := v1alpha1.Measurement{
 			Metadata: mapMetadata,
@@ -2003,6 +2001,7 @@ func TestResumeSucessCases(t *testing.T) {
 		}
 		measurement = provider.Resume(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
+		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 	}
 }
 
@@ -2096,7 +2095,7 @@ func TestNowFeature(t *testing.T) {
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
-		assert.Equal(t, fmt.Sprintf("Report Url: %s", test.reportUrl), measurement.Metadata["reportUrl"])
+		assert.Equal(t, test.reportUrl, measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 	}
 }
@@ -2131,7 +2130,7 @@ func TestRolloutFunctions(t *testing.T) {
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
-		assert.Equal(t, fmt.Sprintf("Report Url: %s", test.reportUrl), measurement.Metadata["reportUrl"])
+		assert.Equal(t, fmt.Sprintf("%s", test.reportUrl), measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 		measurement2 := provider.Terminate(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, measurement, measurement2)
@@ -2461,7 +2460,7 @@ func TestIncorrectServiceName(t *testing.T) {
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = "1424"
-	mapMetadata["reportUrl"] = "Report Url: https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424"
+	mapMetadata["reportUrl"] = "https://opsmx.test.tst/ui/application/deploymentverification/multiservice/1424"
 
 	measurement := v1alpha1.Measurement{
 		Metadata: mapMetadata,
