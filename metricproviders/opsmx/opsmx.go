@@ -155,6 +155,12 @@ func basicChecks(metric v1alpha1.Metric) error {
 	if metric.Provider.OPSMX.IntervalTime != 0 && metric.Provider.OPSMX.IntervalTime < 3 {
 		return errors.New("interval time cannot be less than 3 minutes")
 	}
+	if metric.Provider.OPSMX.LookBackType != "" && metric.Provider.OPSMX.IntervalTime == 0 {
+		return errors.New("lookbacktype is given and interval time is required to run interval analysis")
+	}
+	if metric.Provider.OPSMX.LookBackType == "" && metric.Provider.OPSMX.IntervalTime != 0 {
+		return errors.New("interval time is given and lookbacktype is required to run interval analysis")
+	}
 	return nil
 }
 

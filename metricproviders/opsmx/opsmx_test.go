@@ -1225,6 +1225,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      2,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1256,6 +1257,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1290,6 +1292,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1324,6 +1327,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1357,6 +1361,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1391,6 +1396,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1424,6 +1430,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1456,6 +1463,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1488,6 +1496,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1520,6 +1529,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1552,6 +1562,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
@@ -1572,6 +1583,76 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "missing metric Scope placeholder for the provided baseline/canary",
 	},
+	//Test case when intervalTime is given but lookBackType is not given
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					IntervalTime:      3,
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							MetricTemplateName:   "prom",
+							LogScopeVariables:    "kubernetes.container_name",
+							BaselineLogScope:     "oes-datascienece-br",
+							CanaryLogScope:       "oes-datascience-cr",
+							LogTemplateName:      "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "interval time is given and lookbacktype is required to run interval analysis",
+	},
+	//Test case when intervalTime is not given but lookBackType is given
+	{
+		metric: v1alpha1.Metric{
+			Name: "testapp",
+			Provider: v1alpha1.MetricProvider{
+				OPSMX: &v1alpha1.OPSMXMetric{
+					GateUrl:           "https://opsmx.test.tst",
+					Application:       "testapp",
+					BaselineStartTime: "2022-08-02T14:15:00Z",
+					CanaryStartTime:   "2022-08-02T13:15:00Z",
+					LifetimeMinutes:   60,
+					LookBackType:      "growing",
+					Threshold: v1alpha1.OPSMXThreshold{
+						Pass:     80,
+						Marginal: 60,
+					},
+					Services: []v1alpha1.OPSMXService{
+						{
+							MetricScopeVariables: "job_name",
+							BaselineMetricScope:  "oes-sapor-br",
+							CanaryMetricScope:    "oes-sapor-cr",
+							MetricTemplateName:   "prom",
+							LogScopeVariables:    "kubernetes.container_name",
+							BaselineLogScope:     "oes-datascienece-br",
+							CanaryLogScope:       "oes-datascience-cr",
+							LogTemplateName:      "logtemp",
+						},
+					},
+				},
+			},
+		},
+
+		expectedPhase: v1alpha1.AnalysisPhaseError,
+		message:       "lookbacktype is given and interval time is required to run interval analysis",
+	},
 	//Test case when improper URL
 	{
 		metric: v1alpha1.Metric{
@@ -1584,6 +1665,7 @@ var negativeTests = []struct {
 					CanaryStartTime:   "2022-08-02T13:15:00Z",
 					LifetimeMinutes:   60,
 					IntervalTime:      3,
+					LookBackType:      "growing",
 					Threshold: v1alpha1.OPSMXThreshold{
 						Pass:     80,
 						Marginal: 60,
