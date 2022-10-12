@@ -3073,16 +3073,14 @@ func schema_pkg_apis_rollouts_v1alpha1_OPSMXMetric(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"user": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"gateUrl": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"application": {
@@ -3104,10 +3102,10 @@ func schema_pkg_apis_rollouts_v1alpha1_OPSMXMetric(ref common.ReferenceCallback)
 							Format: "",
 						},
 					},
-					"lifetimeHours": {
+					"lifetimeMinutes": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int64",
 						},
 					},
 					"endTime": {
@@ -3147,8 +3145,32 @@ func schema_pkg_apis_rollouts_v1alpha1_OPSMXMetric(ref common.ReferenceCallback)
 							},
 						},
 					},
+					"profile": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"intervalTime": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
+					"lookBackType": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"delay": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
 				},
-				Required: []string{"user", "gateUrl", "application", "threshold", "services"},
+				Required: []string{"application", "threshold"},
 			},
 		},
 		Dependencies: []string{

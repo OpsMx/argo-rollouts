@@ -1039,7 +1039,7 @@ message OPSMXMetric {
 
   optional string canaryStartTime = 5;
 
-  optional string lifetimeHours = 6;
+  optional int64 lifetimeMinutes = 6;
 
   optional string endTime = 7;
 
@@ -1050,6 +1050,14 @@ message OPSMXMetric {
   optional OPSMXThreshold threshold = 10;
 
   repeated OPSMXService services = 11;
+
+  optional string profile = 12;
+
+  optional int64 intervalTime = 13;
+
+  optional string lookBackType = 14;
+
+  optional int64 delay = 15;
 }
 
 message OPSMXService {
@@ -1787,4 +1795,3 @@ message WeightDestination {
   // PodTemplateHash is the pod template hash label for this destination
   optional string podTemplateHash = 3;
 }
-
