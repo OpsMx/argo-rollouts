@@ -541,13 +541,6 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 	}
 
-	if finalScore["intervalNo"] != nil {
-		measurement.Metadata["intervalNo"] = fmt.Sprintf("%v", finalScore["intervalNo"])
-	}
-	if finalScore["isLastRun"] != nil {
-		measurement.Metadata["isLastRun"] = fmt.Sprintf("%v", finalScore["isLastRun"])
-	}
-
 	score, _ := strconv.Atoi(canaryScore)
 	measurement.Value = canaryScore
 	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
@@ -572,6 +565,14 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(jsonBytes, &reportUrlJson)
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
+
+	if reportUrlJson["intervalNo"] != nil {
+		measurement.Metadata["intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
+	}
+	if reportUrlJson["isLastRun"] != nil {
+		measurement.Metadata["isLastRun"] = fmt.Sprintf("%v", reportUrlJson["isLastRun"])
+	}
+
 	//if the status is Running, resume analysis after delay
 	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
