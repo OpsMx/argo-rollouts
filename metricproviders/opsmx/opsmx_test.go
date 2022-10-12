@@ -1740,6 +1740,8 @@ func TestResumeSucessCases(t *testing.T) {
 						"lastUpdated": "2022-09-02 10:02:18.504",
 						"canaryReportURL": "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
 						"overallScore": 100,
+						"intervalNo": 1,
+						"isLastRun": true,
 						"overallResult": "HEALTHY",
 						"message": "Canary Is HEALTHY",
 						"errors": []

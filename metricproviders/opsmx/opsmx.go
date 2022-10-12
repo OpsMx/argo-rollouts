@@ -540,6 +540,14 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 	} else {
 		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 	}
+
+	if finalScore["intervalNo"] != nil {
+		measurement.Metadata["intervalNo"] = fmt.Sprintf("%v", finalScore["intervalNo"])
+	}
+	if finalScore["isLastRun"] != nil {
+		measurement.Metadata["isLastRun"] = fmt.Sprintf("%v", finalScore["isLastRun"])
+	}
+
 	score, _ := strconv.Atoi(canaryScore)
 	measurement.Value = canaryScore
 	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
