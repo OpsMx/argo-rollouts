@@ -122,7 +122,6 @@ func makeRequest(client http.Client, requestType string, url string, body string
 
 	res, err := client.Do(req)
 	if err != nil {
-		log.Infof("In error")
 		return []byte{}, "", err
 	}
 	defer res.Body.Close()
@@ -289,8 +288,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("%s", secretData)
-	log.Infof("After getDataSecret")
 
 	//develop Canary Register Url
 	canaryurl, err := urlJoiner(secretData["gateUrl"], v5configIdLookupURLFormat)
@@ -369,8 +366,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			//For Log Analysis is to be added in analysis-run
 			if item.LogScopeVariables != "" {
 				//Check if no baseline or canary
-				if item.BaselineLogScope == "" || item.CanaryLogScope == "" {
-					err := errors.New("missing baseline/canary for log analysis")
+				if item.BaselineLogScope == "" && item.CanaryLogScope != "" {
+					err := errors.New("missing baseline for log analysis")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
 				//Check if the number of placeholders provided dont match
@@ -475,8 +472,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	log.Infof("Before make request")
-	log.Infof("%s", string(buffer))
 	data, urlScore, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -502,10 +497,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	stringifiedCanaryId := string(canary.CanaryId)
 
 	mapMetadata := make(map[string]string)
-	mapMetadata["Group"] = run.Name
-	mapMetadata["payload"] = string(buffer)
-	mapMetadata["gateUrl"] = secretData["gateUrl"]
-	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
@@ -551,7 +542,6 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 	measurement.Value = canaryScore
 	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
 	if measurement.Phase == "Failed" && metric.Provider.OPSMX.LookBackType != "" {
-		fmt.Printf("\n\nHere\n\n")
 		measurement.Metadata["interval analysis message"] = fmt.Sprintf("Interval Analysis Failed at intervalNo. %s", measurement.Metadata["Current intervalNo"])
 	}
 	return measurement

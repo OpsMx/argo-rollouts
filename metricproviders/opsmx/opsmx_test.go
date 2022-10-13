@@ -1278,7 +1278,7 @@ var negativeTests = []struct {
 		},
 
 		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "missing baseline/canary for log analysis",
+		message:       "missing baseline for log analysis",
 	},
 	//Test case when baseline or canary metricplaceholder is missing
 	{
