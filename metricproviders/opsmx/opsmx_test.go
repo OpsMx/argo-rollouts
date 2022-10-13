@@ -1864,7 +1864,6 @@ func TestResumeSucessCases(t *testing.T) {
 		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseSuccessful, measurement.Phase)
 	}
-
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
@@ -1880,6 +1879,7 @@ func TestResumeSucessCases(t *testing.T) {
 						"lastUpdated": "2022-09-02 10:02:18.504",
 						"canaryReportURL": "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424",
 						"overallScore": 0,
+						"intervalNo": 2,
 						"overallResult": "HEALTHY",
 						"message": "Canary Is HEALTHY",
 						"errors": []
@@ -1919,6 +1919,10 @@ func TestResumeSucessCases(t *testing.T) {
 		assert.NotNil(t, measurement.FinishedAt)
 		assert.Equal(t, "https://opsmx.test.tst/ui/application/deploymentverification/testapp/1424", measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseFailed, measurement.Phase)
+		if test.metric.Provider.OPSMX.LookBackType != "" {
+			assert.Equal(t, "Interval Analysis Failed at intervalNo. 2", measurement.Metadata["interval analysis message"])
+			assert.Equal(t, "2", measurement.Metadata["Current intervalNo"])
+		}
 	}
 	for _, test := range successfulTests {
 		e := log.NewEntry(log.New())
