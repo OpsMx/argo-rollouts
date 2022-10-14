@@ -1315,10 +1315,7 @@ var negativeTests = []struct {
 		expectedPhase: v1alpha1.AnalysisPhaseError,
 		message:       "missing baseline/canary for metric analysis",
 	},
-	//Test case when global and service specific template is missing
-	{
-		metric: v1alpha1.Metric{
-			Name: "testapp",
+	//Test >>Name: "testapp",
 			Provider: v1alpha1.MetricProvider{
 				OPSMX: &v1alpha1.OPSMXMetric{
 					GateUrl:           "https://opsmx.test.tst",
