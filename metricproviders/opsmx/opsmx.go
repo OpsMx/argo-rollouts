@@ -366,8 +366,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			//For Log Analysis is to be added in analysis-run
 			if item.LogScopeVariables != "" {
 				//Check if no baseline or canary
-				if item.BaselineLogScope == "" && item.CanaryLogScope != "" {
-					err := errors.New("missing baseline for log analysis")
+				if item.BaselineLogScope != "" && item.CanaryLogScope == "" {
+					err := errors.New("missing canary for log analysis")
 					return metricutil.MarkMeasurementError(newMeasurement, err)
 				}
 				//Check if the number of placeholders provided dont match

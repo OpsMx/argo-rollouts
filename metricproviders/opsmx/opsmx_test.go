@@ -1269,7 +1269,7 @@ var negativeTests = []struct {
 							CanaryMetricScope:    "oes-sapor-cr",
 							MetricTemplateName:   "metrictemplate",
 							LogScopeVariables:    "kubernetes.container_name",
-							CanaryLogScope:       "oes-datascience-cr",
+							BaselineLogScope:     "oes-datascience-cr",
 							LogTemplateName:      "logtemplate",
 						},
 					},
@@ -1278,7 +1278,7 @@ var negativeTests = []struct {
 		},
 
 		expectedPhase: v1alpha1.AnalysisPhaseError,
-		message:       "missing baseline for log analysis",
+		message:       "missing canary for log analysis",
 	},
 	//Test case when baseline or canary metricplaceholder is missing
 	{
