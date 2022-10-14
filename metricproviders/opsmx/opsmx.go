@@ -497,6 +497,12 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = stringifiedCanaryId
+	mapMetadata["payload"] = string(buffer)
+	mapMetadata["gateUrl"] = secretData["gateUrl"]
+	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
+	mapMetadata["canaryId"] = stringifiedCanaryId
+	mapMetadata["scoreUrl"] = fmt.Sprintf("Report Url: %s", scoreUrl)
+	log.Infof("In run ScoreUrl is %s", scoreUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -564,6 +570,9 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(jsonBytes, &reportUrlJson)
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
+
+	log.Infof("In resume ------------> ScoreUrl is %s", scoreUrl)
+	log.Infof("In resume ------------> ReportUrl is %s", reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
