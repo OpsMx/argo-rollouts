@@ -31,14 +31,13 @@ import (
 const (
 	ProviderType                            = "opsmx"
 	v5configIdLookupURLFormat               = `/autopilot/api/v5/registerCanary`
+	scoreUrlFormat                          = `/autopilot/v5/canaries/`
 	resumeAfter                             = 3 * time.Second
 	httpConnectionTimeout     time.Duration = 15 * time.Second
 	defaultSecretName                       = "opsmx-profile"
 	cdIntegrationArgoRollouts               = "argorollouts"
 	cdIntegrationArgoCD                     = "argocd"
 )
-
-var scoreUrl string
 
 type Provider struct {
 	logCtx        log.Entry
@@ -475,7 +474,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	scoreUrl = urlScore
+	scoreUrl := urlScore
 	//Struct to record canary Response
 	type canaryResponse struct {
 		Error    string      `json:"error,omitempty"`
@@ -501,7 +500,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	mapMetadata["gateUrl"] = secretData["gateUrl"]
 	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
 	mapMetadata["canaryId"] = stringifiedCanaryId
-	mapMetadata["scoreUrl"] = fmt.Sprintf("Report Url: %s", scoreUrl)
 	log.Infof("In run ScoreUrl is %s", scoreUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
@@ -554,9 +552,13 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
+	scoreURL, err := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
+	if err != nil {
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
 
-	data, _, err := makeRequest(p.client, "GET", scoreUrl, "", secretData["user"])
+	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
@@ -571,7 +573,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
 
-	log.Infof("In resume ------------> ScoreUrl is %s", scoreUrl)
+	log.Infof("In resume ------------> ScoreUrl is %s", scoreURL)
 	log.Infof("In resume ------------> ReportUrl is %s", reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
