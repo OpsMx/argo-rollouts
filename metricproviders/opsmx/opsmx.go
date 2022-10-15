@@ -549,6 +549,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
 	log.Infof("ScoreUrl is %s", scoreURL)
+	time.Sleep(1)
 	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
