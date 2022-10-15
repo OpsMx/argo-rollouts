@@ -554,9 +554,10 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
-
+	log.Infof("In resume ------------> ScoreUrl is %s", scoreURL)
 	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
+		log.Infof("In error for scoreUrl%s", scoreURL)
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 	var status map[string]interface{}
@@ -570,7 +571,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
 
-	log.Infof("In resume ------------> ScoreUrl is %s", scoreURL)
 	log.Infof("In resume ------------> ReportUrl is %s", reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
