@@ -546,7 +546,11 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
+	//scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
+	scoreURL, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
+	if err != nil {
+		return metricutil.MarkMeasurementError(measurement, err)
+	}
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
 	log.Infof("ScoreUrl is %s", scoreURL)
 	time.Sleep(1)
