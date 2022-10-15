@@ -470,11 +470,10 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	data, urlScore, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
+	data, _, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	scoreUrl := urlScore
 	//Struct to record canary Response
 	type canaryResponse struct {
 		Error    string      `json:"error,omitempty"`
@@ -496,11 +495,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = stringifiedCanaryId
-	mapMetadata["payload"] = string(buffer)
-	mapMetadata["gateUrl"] = secretData["gateUrl"]
-	mapMetadata["dataPassedFromSecretsFunc"] = fmt.Sprintf("%s", secretData)
-	mapMetadata["canaryId"] = stringifiedCanaryId
-	log.Infof("In run ScoreUrl is %s", scoreUrl)
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -554,10 +548,8 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
-	log.Infof("In resume ------------> ScoreUrl is %s", scoreURL)
 	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
-		log.Infof("In error for scoreUrl%s", scoreURL)
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
 	var status map[string]interface{}
@@ -570,8 +562,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(jsonBytes, &reportUrlJson)
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
-
-	log.Infof("In resume ------------> ReportUrl is %s", reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
