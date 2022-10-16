@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"math"
-	"path"
 
 	"net/http"
 	"net/url"
@@ -96,7 +95,7 @@ func roundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
-func urlJoiner(gateUrl string, paths ...string) (string, error) {
+/*func urlJoiner(gateUrl string, paths ...string) (string, error) {
 	u, err := url.Parse(gateUrl)
 	if err != nil {
 		return "", err
@@ -106,7 +105,7 @@ func urlJoiner(gateUrl string, paths ...string) (string, error) {
 
 	}
 	return u.String(), nil
-}
+}*/
 
 func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, string, error) {
 	reqBody := strings.NewReader(body)
@@ -286,9 +285,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
 	//develop Canary Register Url
-	canaryurl, err := urlJoiner(secretData["gateUrl"], v5configIdLookupURLFormat)
+	canaryurl, err := url.JoinPath(secretData["gateUrl"], v5configIdLookupURLFormat)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -546,14 +544,8 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	//scoreURL, _ := urlJoiner(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
-	scoreURL, err := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
-	if err != nil {
-		return metricutil.MarkMeasurementError(measurement, err)
-	}
+	scoreURL, _ := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
-	log.Infof("ScoreUrl is %s", scoreURL)
-	time.Sleep(1)
 	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
