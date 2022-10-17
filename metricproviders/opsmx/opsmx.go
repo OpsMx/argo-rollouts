@@ -95,19 +95,7 @@ func roundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
-/*func urlJoiner(gateUrl string, paths ...string) (string, error) {
-	u, err := url.Parse(gateUrl)
-	if err != nil {
-		return "", err
-	}
-	for _, p := range paths {
-		u.Path = path.Join(u.Path, p)
-
-	}
-	return u.String(), nil
-}*/
-
-func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, string, error) {
+func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
 	req, _ := http.NewRequest(
 		requestType,
@@ -120,19 +108,15 @@ func makeRequest(client http.Client, requestType string, url string, body string
 
 	res, err := client.Do(req)
 	if err != nil {
-		return []byte{}, "", err
+		return []byte{}, err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return []byte{}, "", err
+		return []byte{}, err
 	}
-	var urlScore string
-	if requestType == "POST" {
-		urlScore = res.Header.Get("Location")
-	}
-	return data, urlScore, err
+	return data, err
 }
 
 // Check few conditions pre-analysis
@@ -468,7 +452,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	data, _, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
+	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -546,7 +530,7 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	scoreURL, _ := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
-	data, _, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
+	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
 	}
