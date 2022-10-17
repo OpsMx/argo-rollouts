@@ -528,8 +528,8 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	scoreURL, _ := url.JoinPath(metric.Provider.OPSMX.GateUrl, scoreUrlFormat, measurement.Metadata["canaryId"])
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
+	scoreURL, _ := url.JoinPath(secretData["gateUrl"], scoreUrlFormat, measurement.Metadata["canaryId"])
 	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
