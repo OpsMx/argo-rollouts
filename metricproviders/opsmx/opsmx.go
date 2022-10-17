@@ -529,7 +529,11 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
 	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
+
+	log.Infof("Secret data for canary ID %s is %v", measurement.Metadata["canaryId"], secretData)
+
 	scoreURL, _ := url.JoinPath(secretData["gateUrl"], scoreUrlFormat, measurement.Metadata["canaryId"])
+	log.Infof("The score url for canary ID %s is %s", measurement.Metadata["canaryId"], scoreURL)
 	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
@@ -544,6 +548,8 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(jsonBytes, &reportUrlJson)
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
+
+	log.Infof("The report url for canary ID %s is %s", measurement.Metadata["canaryId"], reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
