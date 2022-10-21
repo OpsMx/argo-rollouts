@@ -565,6 +565,8 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
 
+	run.Annotations["Reporturl"] = fmt.Sprintf("%s", reportUrl)
+
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
 	}
