@@ -21,7 +21,6 @@ import (
 	"errors"
 
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
-	"github.com/argoproj/argo-rollouts/utils/defaults"
 	metricutil "github.com/argoproj/argo-rollouts/utils/metric"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
 	log "github.com/sirupsen/logrus"
@@ -236,17 +235,12 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			var templateVerification bool
 			json.Unmarshal(data, &templateVerification)
 			templateData[templateName] = sha1Code
-			log.Infof("Status if exists: %v", templateVerification)
 			if !templateVerification {
 				data, err = makeRequest(client, "POST", templateUrl, templates.Items[i].Data["Json"], secretData["user"])
 				if err != nil {
 					return nil, err
 				}
 				json.Unmarshal(data, &templateCheckSave)
-				log.Infof(templateCheckSave.Message)
-				log.Infof(templateCheckSave.Error)
-				log.Infof(templates.Items[i].Data["Json"])
-				log.Infof(templateUrl)
 			}
 		}
 	}
@@ -254,19 +248,18 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 		err = errors.New("no templates found")
 		return nil, err
 	}
-	log.Infof("Above Temp Data: %v", templateData)
+
 	return templateData, nil
 }
 
-func getDataSecret(metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
+func getDataSecret(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
 	//TODO - Refactor
-	ns := defaults.Namespace()
 	secretData := map[string]string{}
 	secretName := defaultSecretName
 	if metric.Provider.OPSMX.Profile != "" {
 		secretName = metric.Provider.OPSMX.Profile
 	}
-	secret, err := kubeclientset.CoreV1().Secrets(ns).Get(context.TODO(), secretName, metav1.GetOptions{})
+	secret, err := kubeclientset.CoreV1().Secrets(run.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +323,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
-	secretData, err := getDataSecret(metric, p.kubeclientset, true)
+	secretData, err := getDataSecret(run, metric, p.kubeclientset, true)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
@@ -370,7 +363,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
 	}
-	log.Infof("Templatedata: %v", templateData)
+
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
@@ -500,7 +493,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				} else {
 					tempName = metric.Provider.OPSMX.GlobalMetricTemplate
 				}
-				log.Infof("TemplateName: %v", tempName)
+
 				//Add templateName
 				deployment.Baseline.Metric[serviceName]["template"] = tempName
 				deployment.Canary.Metric[serviceName]["template"] = tempName
@@ -508,7 +501,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
 				}
-				log.Infof("Add template")
+
 				//Add non-mandatory field of Template Version if provided
 				if item.MetricTemplateVersion != "" {
 					deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
@@ -533,7 +526,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("Payload: %s", string(buffer))
+
 	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -554,16 +547,9 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
 
-	//Develop the Report URL
-	stringifiedCanaryId := string(canary.CanaryId)
-
 	mapMetadata := make(map[string]string)
-	mapMetadata["payload"] = fmt.Sprintf("%v", payload)
-	mapMetadata["canaryId"] = stringifiedCanaryId
+	mapMetadata["canaryId"] = string(canary.CanaryId)
 	mapMetadata["gateUrl"] = secretData["gateUrl"]
-	if metric.Provider.OPSMX.GitOPS {
-		mapMetadata["template"] = fmt.Sprintf("%v", templateData)
-	}
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
@@ -615,12 +601,10 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 
 // Resume the in-progress measurement
 func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, measurement v1alpha1.Measurement) v1alpha1.Measurement {
-	secretData, _ := getDataSecret(metric, p.kubeclientset, false)
-
-	log.Infof("Secret data for canary ID %s is %v", measurement.Metadata["canaryId"], secretData)
+	secretData, _ := getDataSecret(run, metric, p.kubeclientset, false)
 
 	scoreURL, _ := url.JoinPath(secretData["gateUrl"], scoreUrlFormat, measurement.Metadata["canaryId"])
-	log.Infof("The score url for canary ID %s is %s", measurement.Metadata["canaryId"], scoreURL)
+
 	data, err := makeRequest(p.client, "GET", scoreURL, "", secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(measurement, err)
@@ -635,8 +619,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	json.Unmarshal(jsonBytes, &reportUrlJson)
 	reportUrl := reportUrlJson["canaryReportURL"]
 	measurement.Metadata["reportUrl"] = fmt.Sprintf("%s", reportUrl)
-
-	log.Infof("The report url for canary ID %s is %s", measurement.Metadata["canaryId"], reportUrl)
 
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
