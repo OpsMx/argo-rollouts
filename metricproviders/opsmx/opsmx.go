@@ -367,6 +367,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 			return metricutil.MarkMeasurementError(newMeasurement, err)
 		}
 	}
+	log.Infof("Templatedata: %v", templateData)
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
@@ -531,7 +532,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("%s", string(buffer))
+	log.Infof("Payload: %s", string(buffer))
 	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
