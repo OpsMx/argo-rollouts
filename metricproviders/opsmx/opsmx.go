@@ -504,8 +504,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				}
 				log.Infof("TemplateName: %v", tempName)
 				if metric.Provider.OPSMX.GitOPS {
-					deployment.Baseline.Log[serviceName]["templateSha1"] = templateData[tempName]
-					deployment.Canary.Log[serviceName]["templateSha1"] = templateData[tempName]
+					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
+					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
 				} else {
 					//Add templateName
 					deployment.Baseline.Metric[serviceName]["template"] = tempName
