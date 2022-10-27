@@ -556,8 +556,12 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	stringifiedCanaryId := string(canary.CanaryId)
 
 	mapMetadata := make(map[string]string)
+	mapMetadata["payload"] = fmt.Sprintf("%v", payload)
 	mapMetadata["canaryId"] = stringifiedCanaryId
 	mapMetadata["gateUrl"] = secretData["gateUrl"]
+	if metric.Provider.OPSMX.GitOPS {
+		mapMetadata["template"] = fmt.Sprintf("%v", templateData)
+	}
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
