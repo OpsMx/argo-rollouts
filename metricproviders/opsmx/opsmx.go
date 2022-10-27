@@ -448,15 +448,14 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				} else {
 					tempName = metric.Provider.OPSMX.GlobalLogTemplate
 				}
+				//Add service specific templateName
+				deployment.Baseline.Log[serviceName]["template"] = tempName
+				deployment.Canary.Log[serviceName]["template"] = tempName
 
 				if metric.Provider.OPSMX.GitOPS {
 					deployment.Baseline.Log[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Log[serviceName]["templateSha1"] = templateData[tempName]
 				}
-				//Add service specific templateName
-				deployment.Baseline.Log[serviceName]["template"] = tempName
-				deployment.Canary.Log[serviceName]["template"] = tempName
-
 				//Add non-mandatory field of Templateversion if provided
 				if item.LogTemplateVersion != "" {
 					deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
@@ -502,14 +501,14 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					tempName = metric.Provider.OPSMX.GlobalMetricTemplate
 				}
 				log.Infof("TemplateName: %v", tempName)
+				//Add templateName
+				deployment.Baseline.Metric[serviceName]["template"] = tempName
+				deployment.Canary.Metric[serviceName]["template"] = tempName
 				if metric.Provider.OPSMX.GitOPS {
 					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
 				}
 				log.Infof("Add template")
-				//Add templateName
-				deployment.Baseline.Metric[serviceName]["template"] = tempName
-				deployment.Canary.Metric[serviceName]["template"] = tempName
 				//Add non-mandatory field of Template Version if provided
 				if item.MetricTemplateVersion != "" {
 					deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
