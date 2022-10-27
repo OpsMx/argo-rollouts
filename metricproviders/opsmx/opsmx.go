@@ -251,7 +251,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 		err = errors.New("no templates found")
 		return nil, err
 	}
-	log.Infof("%v", templateData)
+	log.Infof("Above Temp Data: %v", templateData)
 	return templateData, nil
 }
 
