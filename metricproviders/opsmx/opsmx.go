@@ -251,6 +251,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 		err = errors.New("no templates found")
 		return nil, err
 	}
+	log.Infof("%v", templateData)
 	return templateData, nil
 }
 
@@ -526,7 +527,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		err = errors.New("no services provided")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
+	log.Infof("%v", payload)
 	buffer, err := json.Marshal(payload)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
