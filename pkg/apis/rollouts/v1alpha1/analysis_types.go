@@ -451,6 +451,7 @@ type OPSMXMetric struct {
 	IntervalTime         int64          `json:"intervalTime,omitempty" protobuf:"bytes,13,opt,name=intervalTime"`
 	LookBackType         string         `json:"lookBackType,omitempty" protobuf:"bytes,14,opt,name=lookBackType"`
 	Delay                int64          `json:"delay,omitempty" protobuf:"bytes,15,opt,name=delay"`
+	GitOPS               bool           `json:"gitops,omitempty" protobuf:"bytes,16,opt,name=gitops"`
 }
 
 type OPSMXService struct {

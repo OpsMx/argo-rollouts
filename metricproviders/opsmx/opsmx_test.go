@@ -2213,7 +2213,7 @@ func TestRolloutFunctions(t *testing.T) {
 		measurement := provider.Run(newAnalysisRun(), test.metric)
 		assert.NotNil(t, measurement.StartedAt)
 		assert.Equal(t, "1424", measurement.Metadata["canaryId"])
-		assert.Equal(t, fmt.Sprintf("%s", test.reportUrl), measurement.Metadata["reportUrl"])
+		assert.Equal(t, test.reportUrl, measurement.Metadata["reportUrl"])
 		assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 		measurement2 := provider.Terminate(newAnalysisRun(), test.metric, measurement)
 		assert.Equal(t, measurement, measurement2)
@@ -2579,6 +2579,196 @@ func TestGenericNegativeTestsRun(t *testing.T) {
 		assert.Equal(t, test.message, measurement.Message)
 		assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
 	}
+}
+
+// Gitops but no template
+func TestGitopsNoTemplateFound(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+	}
+	opsmxSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "new-secret-name",
+		},
+		Data: data,
+	}
+	fakeClient := k8sfake.NewSimpleClientset()
+	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, opsmxSecret, nil
+	})
+
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   30,
+				LookBackType:      "growing",
+				IntervalTime:      3,
+				GitOPS:            true,
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, "no templates found", measurement.Message)
+	assert.Equal(t, v1alpha1.AnalysisPhaseError, measurement.Phase)
+}
+
+func TestGitops(t *testing.T) {
+	data := map[string][]byte{
+		"cd-integration": []byte("true"),
+		"gate-url":       []byte("https://opsmx.secret.tst"),
+		"source-name":    []byte("sourcename"),
+		"user":           []byte("admin"),
+	}
+	opsmxSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "new-secret-name",
+		},
+		Data: data,
+	}
+	configData := map[string]string{
+		"Template":     "ISDTemplate",
+		"TemplateName": "Matrix",
+		"TemplateType": "Metric",
+		"Json": `{
+			"filterKey": "job_name",
+			"baselineValue": "oes-datascience-br",
+			"newReleaseValue": "oes-datascience-cr",
+			"data": {
+			  "percent_diff_threshold": "hard",
+			  "isNormalize": false,
+			  "groups": [
+				{
+				  "metrics": [
+					{
+					  "metricType": "ADVANCED",
+					  "metricWeight": 1,
+					  "nanStrategy": "Remove",
+					  "accountName": "prom",
+					  "riskDirection": "HigherOrLower",
+					  "customThresholdHigher": 50,
+					  "name": "container_cpu_usage_seconds_total{container='job_name'}",
+					  "criticality": "Normal",
+					  "customThresholdLower": 50,
+					  "watchlist": false
+					}
+				  ],
+				  "group": "Memory"
+				}
+			  ]
+			},
+			"templateName": "metry",
+			"datasourceAppName": null,
+			"advancedProvider": "PROMETHEUS",
+			"templateId": 8,
+			"applicationId": 8,
+			"applicationName": "multiservice" 
+			}`,
+	}
+	opsmxConfig := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "Matrix",
+		},
+		Data: configData,
+	}
+	opsmxConfigList := &corev1.ConfigMapList{
+		Items: []corev1.ConfigMap{
+			opsmxConfig,
+		},
+	}
+	fakeClient := k8sfake.NewSimpleClientset()
+	fakeClient.PrependReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, opsmxSecret, nil
+	})
+	fakeClient.AddReactor("get", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, opsmxConfigList, nil
+	})
+	e := log.NewEntry(log.New())
+	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, endpointRegisterCanary, req.URL.String())
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`
+				{
+				}
+				`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}, nil
+	})
+	metric := v1alpha1.Metric{
+		Name: "testapp",
+		Provider: v1alpha1.MetricProvider{
+			OPSMX: &v1alpha1.OPSMXMetric{
+				GateUrl:           "https://opsmx.test.tst",
+				User:              "admin",
+				Application:       "multiservice",
+				BaselineStartTime: "2022-08-10T13:15:00Z",
+				CanaryStartTime:   "2022-08-10T13:15:00Z",
+				LifetimeMinutes:   30,
+				LookBackType:      "growing",
+				IntervalTime:      3,
+				GitOPS:            true,
+				Threshold: v1alpha1.OPSMXThreshold{
+					Pass:     80,
+					Marginal: 65,
+				},
+				Services: []v1alpha1.OPSMXService{
+					{
+						MetricScopeVariables:  "job_name",
+						BaselineMetricScope:   "oes-datascience-br",
+						CanaryMetricScope:     "oes-datascience-cr",
+						MetricTemplateName:    "metricTemplate",
+						MetricTemplateVersion: "1",
+					},
+				},
+			},
+		},
+	}
+	provider := NewOPSMXProvider(*e, fakeClient, c)
+	measurement := provider.Run(newAnalysisRun(), metric)
+	assert.NotNil(t, measurement.StartedAt)
+	assert.NotNil(t, measurement.FinishedAt)
+	assert.Equal(t, v1alpha1.AnalysisPhaseRunning, measurement.Phase)
 }
 
 // Secret is not created

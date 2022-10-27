@@ -2,6 +2,8 @@ package opsmx
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 
 	"math"
@@ -29,6 +31,7 @@ import (
 
 const (
 	ProviderType                            = "opsmx"
+	templateApi                             = "/autopilot/api/v5/external/template?sha1=%stemplateType=%s&templateName=%s"
 	v5configIdLookupURLFormat               = `/autopilot/api/v5/registerCanary`
 	scoreUrlFormat                          = `/autopilot/v5/canaries/`
 	resumeAfter                             = 3 * time.Second
@@ -192,6 +195,64 @@ func getTimeVariables(baselineTime string, canaryTime string, endTime string, li
 	}
 	return canaryStartTime, baselineStartTime, lifetimeMinutes, nil
 }
+func encryptString(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	sha1_hash := hex.EncodeToString(h.Sum(nil))
+	return sha1_hash
+}
+
+func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interface, client http.Client, secretData map[string]string) (map[string]string, error) {
+	templateData := map[string]string{}
+	templates, err := kubeclientset.CoreV1().ConfigMaps(run.Namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	type templateResponse struct {
+		Status  string `json:"status,omitempty"`
+		Message string `json:"message,omitempty"`
+		Path    string `json:"path,omitempty"`
+		Error   string `json:"error,omitempty"`
+	}
+	var templateCheckSave templateResponse
+	var valid bool
+	for i := range templates.Items {
+		if templates.Items[i].Data["Template"] == "ISDTemplate" {
+			if templates.Items[i].Data["TemplateName"] == "" || templates.Items[i].Data["TemplateType"] == "" || templates.Items[i].Data["Json"] == "" {
+				err = errors.New("template file has missing paramters")
+				return nil, err
+			}
+			valid = true
+			sha1Code := encryptString(templates.Items[i].Data["Json"])
+			templateName := templates.Items[i].Data["TemplateName"]
+			templateType := templates.Items[i].Data["TemplateType"]
+			tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, templateName)
+			templateUrl, err := url.JoinPath(secretData["gateUrl"], tempLink)
+			if err != nil {
+				return nil, err
+			}
+			data, err := makeRequest(client, "GET", templateUrl, "", secretData["user"])
+			if err != nil {
+				return nil, err
+			}
+			var templateVerification bool
+			json.Unmarshal(data, &templateVerification)
+			templateData[templateName] = sha1Code
+			if !templateVerification {
+				data, err = makeRequest(client, "POST", templateUrl, templates.Items[i].Data["Json"], secretData["user"])
+				if err != nil {
+					return nil, err
+				}
+				json.Unmarshal(data, &templateCheckSave)
+			}
+		}
+	}
+	if !valid {
+		err = errors.New("no templates found")
+		return nil, err
+	}
+	return templateData, nil
+}
 
 func getDataSecret(metric v1alpha1.Metric, kubeclientset kubernetes.Interface, isRun bool) (map[string]string, error) {
 	//TODO - Refactor
@@ -298,7 +359,13 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	} else {
 		opsmxdelay = ""
 	}
-
+	var templateData map[string]string
+	if metric.Provider.OPSMX.GitOPS {
+		templateData, err = getTemplateData(run, p.kubeclientset, p.client, secretData)
+		if err != nil {
+			return metricutil.MarkMeasurementError(newMeasurement, err)
+		}
+	}
 	//Generate the payload
 	payload := jobPayload{
 		Application: metric.Provider.OPSMX.Application,
@@ -370,19 +437,26 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					"serviceGate":          gateName,
 				}
 
-				//Add service specific templateName
+				var tempName string
 				if item.LogTemplateName != "" {
-					deployment.Baseline.Log[serviceName]["template"] = item.LogTemplateName
-					deployment.Canary.Log[serviceName]["template"] = item.LogTemplateName
+					tempName = item.LogTemplateName
 				} else {
-					deployment.Baseline.Log[serviceName]["template"] = metric.Provider.OPSMX.GlobalLogTemplate
-					deployment.Canary.Log[serviceName]["template"] = metric.Provider.OPSMX.GlobalLogTemplate
+					tempName = metric.Provider.OPSMX.GlobalLogTemplate
 				}
 
-				//Add non-mandatory field of Templateversion if provided
-				if item.LogTemplateVersion != "" {
-					deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
-					deployment.Canary.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
+				if metric.Provider.OPSMX.GitOPS {
+					deployment.Baseline.Log[serviceName]["templateSha1"] = templateData[tempName]
+					deployment.Canary.Log[serviceName]["templateSha1"] = templateData[tempName]
+				} else {
+					//Add service specific templateName
+					deployment.Baseline.Log[serviceName]["template"] = tempName
+					deployment.Canary.Log[serviceName]["template"] = tempName
+
+					//Add non-mandatory field of Templateversion if provided
+					if item.LogTemplateVersion != "" {
+						deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
+						deployment.Canary.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
+					}
 				}
 				valid = true
 			}
@@ -417,19 +491,25 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					item.MetricScopeVariables: item.CanaryMetricScope,
 					"serviceGate":             gateName,
 				}
-				//Add templateName
+				var tempName string
 				if item.MetricTemplateName != "" {
-					deployment.Baseline.Metric[serviceName]["template"] = item.MetricTemplateName
-					deployment.Canary.Metric[serviceName]["template"] = item.MetricTemplateName
+					tempName = item.MetricTemplateName
 				} else {
-					deployment.Baseline.Metric[serviceName]["template"] = metric.Provider.OPSMX.GlobalMetricTemplate
-					deployment.Canary.Metric[serviceName]["template"] = metric.Provider.OPSMX.GlobalMetricTemplate
+					tempName = metric.Provider.OPSMX.GlobalMetricTemplate
 				}
 
-				//Add non-mandatory field of Template Version if provided
-				if item.MetricTemplateVersion != "" {
-					deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
-					deployment.Canary.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
+				if metric.Provider.OPSMX.GitOPS {
+					deployment.Baseline.Log[serviceName]["templateSha1"] = templateData[tempName]
+					deployment.Canary.Log[serviceName]["templateSha1"] = templateData[tempName]
+				} else {
+					//Add templateName
+					deployment.Baseline.Metric[serviceName]["template"] = tempName
+					deployment.Canary.Metric[serviceName]["template"] = tempName
+					//Add non-mandatory field of Template Version if provided
+					if item.MetricTemplateVersion != "" {
+						deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
+						deployment.Canary.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
+					}
 				}
 				valid = true
 
@@ -477,6 +557,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 	mapMetadata := make(map[string]string)
 	mapMetadata["canaryId"] = stringifiedCanaryId
+	mapMetadata["gateUrl"] = secretData["gateUrl"]
 	resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
 	newMeasurement.Metadata = mapMetadata
 	newMeasurement.ResumeAt = &resumeTime
