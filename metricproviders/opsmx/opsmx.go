@@ -527,12 +527,11 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 		err = errors.New("no services provided")
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-	log.Infof("%v", payload)
 	buffer, err := json.Marshal(payload)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
 	}
-
+	log.Infof("%s", string(buffer))
 	data, err := makeRequest(p.client, "POST", canaryurl, string(buffer), secretData["user"])
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
