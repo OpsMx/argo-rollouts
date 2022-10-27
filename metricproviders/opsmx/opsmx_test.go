@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -1771,7 +1771,7 @@ func TestRunSucessCases(t *testing.T) {
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 			assert.Equal(t, endpointRegisterCanary, req.URL.String())
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				panic(err)
 			}
@@ -1788,7 +1788,7 @@ func TestRunSucessCases(t *testing.T) {
 			assert.Equal(t, expectedBodyI, bodyI)
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"canaryId": 1424
 				}
@@ -1813,7 +1813,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "testapp",
@@ -1870,7 +1870,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "testapp",
@@ -1930,7 +1930,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "testapp",
@@ -1985,7 +1985,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "testapp",
@@ -2039,7 +2039,7 @@ func TestResumeSucessCases(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "testapp",
@@ -2095,7 +2095,7 @@ func TestFailNoLogsConfiguredStillPassedInService(t *testing.T) {
 
 		return &http.Response{
 			StatusCode: 404,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 			{
 				"timestamp": 1.662356583464E12,
 				"status": 404.0,
@@ -2154,7 +2154,7 @@ func TestNowFeature(t *testing.T) {
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 			assert.Equal(t, endpointRegisterCanary, req.URL.String())
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				panic(err)
 			}
@@ -2165,7 +2165,7 @@ func TestNowFeature(t *testing.T) {
 			}
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"canaryId": 1424
 				}
@@ -2189,7 +2189,7 @@ func TestRolloutFunctions(t *testing.T) {
 		c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 			assert.Equal(t, endpointRegisterCanary, req.URL.String())
 
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				panic(err)
 			}
@@ -2200,7 +2200,7 @@ func TestRolloutFunctions(t *testing.T) {
 			}
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"canaryId": 1424
 				}
@@ -2233,7 +2233,7 @@ func TestInvalidJson(t *testing.T) {
 
 			return &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 					"owner": "admin",
 					"application": "testapp",
 					"canaryResult": {
@@ -2287,7 +2287,7 @@ func TestIncorrectApplicationName(t *testing.T) {
 
 		return &http.Response{
 			StatusCode: 500,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 			{
 				"timestamp": 1662442034995,
 				"status": 500,
@@ -2429,7 +2429,7 @@ func TestNoUserDefined(t *testing.T) {
 	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 500,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 			{
 				"timestamp": 1662442034995,
 				"status": 500,
@@ -2481,7 +2481,7 @@ func TestIncorrectServiceName(t *testing.T) {
 
 		return &http.Response{
 			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 					"owner": "admin",
 					"application": "multiservice",
@@ -2564,7 +2564,7 @@ func TestGenericNegativeTestsRun(t *testing.T) {
 			return &http.Response{
 				StatusCode: 200,
 				// Send response to be tested
-				Body: ioutil.NopCloser(bytes.NewBufferString(`
+				Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2606,7 +2606,7 @@ func TestGitopsNoTemplateFound(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2727,7 +2727,7 @@ func TestGitops(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2780,7 +2780,7 @@ func TestSecretNotCreated(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2849,7 +2849,7 @@ func TestSecretEnteredInTemplate(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2905,7 +2905,7 @@ func TestSecretTemplateNotFound(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -2962,7 +2962,7 @@ func TestSourceNameMissingInSecret(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -3021,7 +3021,7 @@ func TestGateUrlMissing(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -3080,7 +3080,7 @@ func TestGateUrlPickedFromSecret(t *testing.T) {
 
 		return &http.Response{
 			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 					{
 						"canaryId": 1424
 					}
@@ -3138,7 +3138,7 @@ func TestUserPickedFromSecret(t *testing.T) {
 		assert.Equal(t, "usersecret", req.Header.Get("x-spinnaker-user"))
 		return &http.Response{
 			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 						{
 							"canaryId": 1424
 						}
@@ -3195,7 +3195,7 @@ func TestUserPickedFromTemplate(t *testing.T) {
 		assert.Equal(t, "usertemplate", req.Header.Get("x-spinnaker-user"))
 		return &http.Response{
 			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 							{
 								"canaryId": 1424
 							}
@@ -3251,7 +3251,7 @@ func TestUserMissing(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -3308,7 +3308,7 @@ func TestCdIntegrationValueNegative(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 					{
 					}
 					`)),
@@ -3365,7 +3365,7 @@ func TestCdIntegrationValueNotPresent(t *testing.T) {
 		return &http.Response{
 			StatusCode: 200,
 			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 				{
 				}
 				`)),
@@ -3450,7 +3450,7 @@ func TestCdIntegrationValueIsFalse(t *testing.T) {
 	c := NewTestClient(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, endpointRegisterCanary, req.URL.String())
 
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			panic(err)
 		}
@@ -3467,7 +3467,7 @@ func TestCdIntegrationValueIsFalse(t *testing.T) {
 		assert.Equal(t, expectedBodyI, bodyI)
 		return &http.Response{
 			StatusCode: 200,
-			Body: ioutil.NopCloser(bytes.NewBufferString(`
+			Body: io.NopCloser(bytes.NewBufferString(`
 			{
 				"canaryId": 1424
 			}
