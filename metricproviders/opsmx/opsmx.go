@@ -452,16 +452,15 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				if metric.Provider.OPSMX.GitOPS {
 					deployment.Baseline.Log[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Log[serviceName]["templateSha1"] = templateData[tempName]
-				} else {
-					//Add service specific templateName
-					deployment.Baseline.Log[serviceName]["template"] = tempName
-					deployment.Canary.Log[serviceName]["template"] = tempName
+				}
+				//Add service specific templateName
+				deployment.Baseline.Log[serviceName]["template"] = tempName
+				deployment.Canary.Log[serviceName]["template"] = tempName
 
-					//Add non-mandatory field of Templateversion if provided
-					if item.LogTemplateVersion != "" {
-						deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
-						deployment.Canary.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
-					}
+				//Add non-mandatory field of Templateversion if provided
+				if item.LogTemplateVersion != "" {
+					deployment.Baseline.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
+					deployment.Canary.Log[serviceName]["templateVersion"] = item.LogTemplateVersion
 				}
 				valid = true
 			}
@@ -506,15 +505,14 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				if metric.Provider.OPSMX.GitOPS {
 					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
-				} else {
-					//Add templateName
-					deployment.Baseline.Metric[serviceName]["template"] = tempName
-					deployment.Canary.Metric[serviceName]["template"] = tempName
-					//Add non-mandatory field of Template Version if provided
-					if item.MetricTemplateVersion != "" {
-						deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
-						deployment.Canary.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
-					}
+				}
+				//Add templateName
+				deployment.Baseline.Metric[serviceName]["template"] = tempName
+				deployment.Canary.Metric[serviceName]["template"] = tempName
+				//Add non-mandatory field of Template Version if provided
+				if item.MetricTemplateVersion != "" {
+					deployment.Baseline.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
+					deployment.Canary.Metric[serviceName]["templateVersion"] = item.MetricTemplateVersion
 				}
 				valid = true
 
