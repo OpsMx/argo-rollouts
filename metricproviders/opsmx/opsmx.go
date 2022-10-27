@@ -12,7 +12,7 @@ import (
 	"net/url"
 
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"strings"
 
@@ -115,7 +115,7 @@ func makeRequest(client http.Client, requestType string, url string, body string
 	}
 	defer res.Body.Close()
 
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return []byte{}, err
 	}
