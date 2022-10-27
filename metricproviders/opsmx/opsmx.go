@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"path"
 
 	"math"
 
@@ -228,7 +227,8 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			templateName := templates.Items[i].Data["TemplateName"]
 			templateType := templates.Items[i].Data["TemplateType"]
 			tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, templateName)
-			templateUrl := path.Join(secretData["gateUrl"], tempLink)
+			s := []string{secretData["gateUrl"], tempLink}
+			templateUrl := strings.Join(s, "")
 			data, err := makeRequest(client, "GET", templateUrl, "", secretData["user"])
 			if err != nil {
 				return nil, err
