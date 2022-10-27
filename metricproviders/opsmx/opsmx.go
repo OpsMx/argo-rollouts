@@ -24,6 +24,7 @@ import (
 	metricutil "github.com/argoproj/argo-rollouts/utils/metric"
 	timeutil "github.com/argoproj/argo-rollouts/utils/time"
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -223,7 +224,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			}
 			valid = true
 			sha1Code := encryptString(templates.Items[i].Data["Json"])
-			templateName := templates.Items[i].Data["TemplateName"]
+			templateName := gjson.Get(templates.Items[i].Data["Json"], "templateName")
 			templateType := templates.Items[i].Data["TemplateType"]
 			tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, templateName)
 			s := []string{secretData["gateUrl"], tempLink}
@@ -234,7 +235,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			}
 			var templateVerification bool
 			json.Unmarshal(data, &templateVerification)
-			templateData[templateName] = sha1Code
+			templateData[templateName.String()] = sha1Code
 			if !templateVerification {
 				data, err = makeRequest(client, "POST", templateUrl, templates.Items[i].Data["Json"], secretData["user"])
 				if err != nil {
