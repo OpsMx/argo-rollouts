@@ -238,12 +238,17 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			var templateVerification bool
 			json.Unmarshal(data, &templateVerification)
 			templateData[templateName] = sha1Code
+			log.Infof("Status if exists: %v", templateVerification)
 			if !templateVerification {
 				data, err = makeRequest(client, "POST", templateUrl, templates.Items[i].Data["Json"], secretData["user"])
 				if err != nil {
 					return nil, err
 				}
 				json.Unmarshal(data, &templateCheckSave)
+				log.Infof(templateCheckSave.Message)
+				log.Infof(templateCheckSave.Error)
+				log.Infof(templates.Items[i].Data["Json"])
+				log.Infof(templateUrl)
 			}
 		}
 	}
