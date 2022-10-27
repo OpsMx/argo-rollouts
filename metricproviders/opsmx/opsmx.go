@@ -506,6 +506,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
 				}
+				log.Infof("Add template")
 				//Add templateName
 				deployment.Baseline.Metric[serviceName]["template"] = tempName
 				deployment.Canary.Metric[serviceName]["template"] = tempName
