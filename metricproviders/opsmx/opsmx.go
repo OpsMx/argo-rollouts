@@ -219,16 +219,16 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 	for i := range templates.Items {
 		if templates.Items[i].Data["Template"] == "ISDTemplate" {
 			if templates.Items[i].Data["TemplateType"] == "" || templates.Items[i].Data["Json"] == "" {
-				err = errors.New("template file has missing paramters")
-				return nil, err
-			}
-			_, err := json.Marshal(templates.Items[i].Data["Json"])
-			if err != nil {
+				err = errors.New("config map file has missing paramters")
 				return nil, err
 			}
 			valid = true
 			sha1Code := encryptString(templates.Items[i].Data["Json"])
 			templateName := gjson.Get(templates.Items[i].Data["Json"], "templateName")
+			if templateName.String() == "" {
+				err = errors.New("invalid json")
+				return nil, err
+			}
 			templateType := templates.Items[i].Data["TemplateType"]
 			tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, templateName)
 			s := []string{secretData["gateUrl"], tempLink}
