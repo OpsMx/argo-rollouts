@@ -498,7 +498,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				//Add templateName
 				deployment.Baseline.Metric[serviceName]["template"] = tempName
 				deployment.Canary.Metric[serviceName]["template"] = tempName
-				if metric.Provider.OPSMX.GitOPS {
+				if metric.Provider.OPSMX.GitOPS && templateData[tempName] != "" {
 					deployment.Baseline.Metric[serviceName]["templateSha1"] = templateData[tempName]
 					deployment.Canary.Metric[serviceName]["templateSha1"] = templateData[tempName]
 				}
