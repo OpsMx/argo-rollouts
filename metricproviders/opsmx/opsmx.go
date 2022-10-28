@@ -226,7 +226,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			sha1Code := encryptString(templates.Items[i].Data["Json"])
 			templateName := gjson.Get(templates.Items[i].Data["Json"], "templateName")
 			if templateName.String() == "" {
-				err = errors.New("invalid json")
+				err = errors.New("invalid template json provided")
 				return nil, err
 			}
 			templateType := templates.Items[i].Data["TemplateType"]
