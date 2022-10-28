@@ -222,6 +222,10 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 				err = errors.New("template file has missing paramters")
 				return nil, err
 			}
+			_, err := json.Marshal(templates.Items[i].Data["Json"])
+			if err != nil {
+				return nil, err
+			}
 			valid = true
 			sha1Code := encryptString(templates.Items[i].Data["Json"])
 			templateName := gjson.Get(templates.Items[i].Data["Json"], "templateName")
