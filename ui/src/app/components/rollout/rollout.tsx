@@ -88,8 +88,8 @@ export const parseImages = (replicaSets: RolloutReplicaSetInfo[]): ImageInfo[] =
 
 export type ReactStatePair = [boolean, React.Dispatch<React.SetStateAction<boolean>>];
 
-export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?: {editState: ReactStatePair; api: RolloutServiceApi; namespace: string}}) => {
-    const {rollout, interactive} = props;
+export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?: {editState: ReactStatePair; api: RolloutServiceApi; namespace: string},appName?: string}) => {
+    const {rollout, interactive, appName} = props;
     const curStep = parseInt(rollout.step, 10) || (rollout.steps || []).length;
     const revisions = ProcessRevisions(rollout);
 
@@ -154,6 +154,7 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
                                     rollback={interactive ? (r) => interactive.api.rolloutServiceUndoRollout({}, interactive.namespace, rollout.objectMeta.name, `${r}`) : null}
                                     current={i === 0}
                                     message={rollout.message}
+                                    appName={appName}
                                 />
                             ))}
                         </div>
