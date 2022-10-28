@@ -218,7 +218,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 	var valid bool
 	for i := range templates.Items {
 		if templates.Items[i].Data["Template"] == "ISDTemplate" {
-			if templates.Items[i].Data["TemplateName"] == "" || templates.Items[i].Data["TemplateType"] == "" || templates.Items[i].Data["Json"] == "" {
+			if templates.Items[i].Data["TemplateType"] == "" || templates.Items[i].Data["Json"] == "" {
 				err = errors.New("template file has missing paramters")
 				return nil, err
 			}
