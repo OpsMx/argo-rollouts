@@ -1,9 +1,9 @@
-import { ActionButton, EffectDiv, formatTimestamp, InfoItemProps, InfoItemRow, ThemeDiv, Tooltip } from 'argo-ui/v2';
+import {ActionButton, EffectDiv, formatTimestamp, InfoItemProps, InfoItemRow, ThemeDiv, Tooltip} from 'argo-ui/v2';
 import * as React from 'react';
-import { RolloutAnalysisRunInfo, RolloutExperimentInfo, RolloutReplicaSetInfo } from '../../../models/rollout/generated';
-import { IconForTag } from '../../shared/utils/utils';
-import { PodWidget, ReplicaSets } from '../pods/pods';
-import { ImageInfo, parseImages } from './rollout';
+import {RolloutAnalysisRunInfo, RolloutExperimentInfo, RolloutReplicaSetInfo} from '../../../models/rollout/generated';
+import {IconForTag} from '../../shared/utils/utils';
+import {PodWidget, ReplicaSets} from '../pods/pods';
+import {ImageInfo, parseImages} from './rollout';
 import './rollout.scss';
 import '../pods/pods.scss';
 
@@ -41,7 +41,7 @@ const ImageItems = (props: { images: ImageInfo[] }) => {
         <div>
             {props.images.map((img) => {
                 let imageItems = img?.tags?.map((t) => {
-                    return { content: t, icon: IconForTag(t) } as InfoItemProps;
+                    return {content: t, icon: IconForTag(t)} as InfoItemProps;
                 });
                 if (imageItems.length === 0) {
                     imageItems = [];
@@ -62,7 +62,7 @@ interface RevisionWidgetProps {
 }
 
 export const RevisionWidget = (props: RevisionWidgetProps) => {
-    const { revision, initCollapsed } = props;
+    const {revision, initCollapsed} = props;
     const [collapsed, setCollapsed] = React.useState(initCollapsed);
     const icon = collapsed ? 'fa-chevron-circle-down' : 'fa-chevron-circle-up';
     const images = parseImages(revision.replicaSets);
@@ -70,13 +70,13 @@ export const RevisionWidget = (props: RevisionWidgetProps) => {
         <EffectDiv key={revision.number} className='revision'>
             <ThemeDiv className='revision__header'>
                 Revision {revision.number}
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                <div style={{marginLeft: 'auto', display: 'flex', alignItems: 'center'}}>
                     {!props.current && props.rollback && (
                         <ActionButton
                             action={() => props.rollback(Number(revision.number))}
                             label='ROLLBACK'
                             icon='fa-undo-alt'
-                            style={{ fontSize: '13px' }}
+                            style={{fontSize: '13px'}}
                             indicateLoading
                             shouldConfirm
                         />
@@ -95,7 +95,7 @@ export const RevisionWidget = (props: RevisionWidgetProps) => {
                     <ReplicaSets replicaSets={revision.replicaSets} />
                     {(revision.analysisRuns || []).length > 0 && (
                         <React.Fragment>
-                            <div style={{ marginTop: '1em' }}>
+                            <div style={{marginTop: '1em'}}>
                                 <AnalysisRunWidget analysisRuns={revision.analysisRuns} appName={props.appName} />
                             </div>
                         </React.Fragment>
@@ -107,7 +107,7 @@ export const RevisionWidget = (props: RevisionWidgetProps) => {
 };
 
 const AnalysisRunWidget = (props: { analysisRuns: RolloutAnalysisRunInfo[], appName?: String }) => {
-    const { analysisRuns } = props;
+    const {analysisRuns} = props;
     const [selection, setSelection] = React.useState<RolloutAnalysisRunInfo>(null);
 
     return (
@@ -139,8 +139,9 @@ const AnalysisRunWidget = (props: { analysisRuns: RolloutAnalysisRunInfo[], appN
                                 </React.Fragment>
                             }>
                             <div
-                                className={`analysis__runs-action ${ar.status === 'Running' ? 'analysis--pending' : ar.status === 'Successful' ? 'analysis--success' : 'analysis--failure'
-                                    }`}>
+                                className={`analysis__runs-action ${
+                                    ar.status === 'Running' ? 'analysis--pending' : ar.status === 'Successful' ? 'analysis--success' : 'analysis--failure'
+                                }`}>
                                 <ActionButton
                                     action={() => {
                                         (selection?.objectMeta.name === ar.objectMeta.name ? setSelection(null) : setSelection(ar));
@@ -158,7 +159,7 @@ const AnalysisRunWidget = (props: { analysisRuns: RolloutAnalysisRunInfo[], appN
 
             {selection && (
                 <React.Fragment key={selection.objectMeta?.name}>
-                    <div style={{ marginTop: 5 }}>
+                    <div style={{marginTop: 5}}>
                         {selection.objectMeta?.name}
                         <i className={`fa ${selection.status === 'Successful' ? 'fa-check-circle analysis--success' : 'fa-times-circle analysis--failure'}`} />
                         {/* <a href="google.com" >View Report</a> */}
