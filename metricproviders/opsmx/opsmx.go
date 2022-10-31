@@ -328,6 +328,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
+	log.Infof("Metric data: %v", metric.Provider.OPSMX)
+	log.Infof("Run data: %v", run)
 	secretData, err := getDataSecret(run, metric, p.kubeclientset, true)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)

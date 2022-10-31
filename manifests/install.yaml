@@ -15051,7 +15051,7 @@ spec:
         app.kubernetes.io/name: argo-rollouts
     spec:
       containers:
-      - image: isdjunaid:latest
+      - image: opsmx11/argo-isd-metric-provider:v15
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
