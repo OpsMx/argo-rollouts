@@ -330,6 +330,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	}
 	log.Infof("Metric data: %v", metric.Provider.OPSMX)
 	log.Infof("Run data: %v", run)
+	log.Infof("\n\nRun Namespace: %v\n\n", run.Namespace)
 	secretData, err := getDataSecret(run, metric, p.kubeclientset, true)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
