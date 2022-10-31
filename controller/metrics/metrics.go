@@ -44,6 +44,7 @@ type ServerConfig struct {
 	RolloutLister                 rolloutlister.RolloutLister
 	AnalysisRunLister             rolloutlister.AnalysisRunLister
 	AnalysisTemplateLister        rolloutlister.AnalysisTemplateLister
+	ISDTemplateLister             rolloutlister.ISDTemplateLister
 	ClusterAnalysisTemplateLister rolloutlister.ClusterAnalysisTemplateLister
 	ExperimentLister              rolloutlister.ExperimentLister
 	K8SRequestProvider            *K8sRequestsCountProvider
@@ -56,7 +57,7 @@ func NewMetricsServer(cfg ServerConfig) *MetricsServer {
 	reg := prometheus.NewRegistry()
 
 	reg.MustRegister(NewRolloutCollector(cfg.RolloutLister))
-	reg.MustRegister(NewAnalysisRunCollector(cfg.AnalysisRunLister, cfg.AnalysisTemplateLister, cfg.ClusterAnalysisTemplateLister))
+	reg.MustRegister(NewAnalysisRunCollector(cfg.AnalysisRunLister, cfg.AnalysisTemplateLister, cfg.ISDTemplateLister, cfg.ClusterAnalysisTemplateLister))
 	reg.MustRegister(NewExperimentCollector(cfg.ExperimentLister))
 	cfg.K8SRequestProvider.MustRegister(reg)
 	reg.MustRegister(MetricRolloutReconcile)

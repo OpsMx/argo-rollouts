@@ -24,18 +24,29 @@ import (
 
 // RolloutConditionType defines the conditions of Rollout
 type AnalysisTemplateType string
+type ISDTemplateType string
 
 const (
 	PrePromotionAnalysis  AnalysisTemplateType = "PrePromotionAnalysis"
 	PostPromotionAnalysis AnalysisTemplateType = "PostPromotionAnalysis"
 	InlineAnalysis        AnalysisTemplateType = "InlineAnalysis"
 	BackgroundAnalysis    AnalysisTemplateType = "BackgroundAnalysis"
+	ISDInlineAnalysis     ISDTemplateType      = "InlineAnalysis"
+	ISDBackgroundAnalysis ISDTemplateType      = "BackgroundAnalysis"
 )
 
 type AnalysisTemplatesWithType struct {
 	AnalysisTemplates        []*v1alpha1.AnalysisTemplate
 	ClusterAnalysisTemplates []*v1alpha1.ClusterAnalysisTemplate
 	TemplateType             AnalysisTemplateType
+	// CanaryStepIndex only used for InlineAnalysis
+	CanaryStepIndex int
+	Args            []v1alpha1.AnalysisRunArgument
+}
+
+type ISDTemplatesWithType struct {
+	ISDTemplates []*v1alpha1.ISDTemplate
+	TemplateType ISDTemplateType
 	// CanaryStepIndex only used for InlineAnalysis
 	CanaryStepIndex int
 	Args            []v1alpha1.AnalysisRunArgument
@@ -59,6 +70,7 @@ type ServiceWithType struct {
 
 type ReferencedResources struct {
 	AnalysisTemplatesWithType []AnalysisTemplatesWithType
+	ISDTemplatesWithType      []ISDTemplatesWithType
 	Ingresses                 []ingressutil.Ingress
 	ServiceWithType           []ServiceWithType
 	VirtualServices           []unstructured.Unstructured
@@ -458,6 +470,16 @@ func GetAnalysisTemplateWithTypeFieldPath(templateType AnalysisTemplateType, can
 		fldPath = fldPath.Child("canary", "steps").Index(canaryStepIndex).Child("analysis", "templates")
 	case BackgroundAnalysis:
 		fldPath = fldPath.Child("canary", "analysis", "templates")
+	default:
+		// No path specified
+		return nil
+	}
+	return fldPath
+}
+
+func GetISDTemplateWithTypeFieldPath(templateType ISDTemplateType, canaryStepIndex int) *field.Path {
+	fldPath := field.NewPath("spec", "strategy")
+	switch templateType {
 	default:
 		// No path specified
 		return nil

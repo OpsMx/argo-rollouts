@@ -51,6 +51,7 @@ func NewFakeDynamicClient(objects ...runtime.Object) *dynamicfake.FakeDynamicCli
 		druleGVR:                            "DestinationRuleList",
 		v1alpha1.RolloutGVR:                 rollouts.RolloutKind + "List",
 		v1alpha1.AnalysisTemplateGVR:        rollouts.AnalysisTemplateKind + "List",
+		v1alpha1.ISDTemplateGVR:             rollouts.ISDTemplateKind + "List",
 		v1alpha1.AnalysisRunGVR:             rollouts.AnalysisRunKind + "List",
 		v1alpha1.ExperimentGVR:              rollouts.ExperimentKind + "List",
 		v1alpha1.ClusterAnalysisTemplateGVR: rollouts.ClusterAnalysisTemplateKind + "List",

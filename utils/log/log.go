@@ -49,6 +49,8 @@ func WithObject(obj runtime.Object) *log.Entry {
 			kind = "analysisrun"
 		case *v1alpha1.AnalysisTemplate:
 			kind = "analysistemplate"
+		case *v1alpha1.ISDTemplate:
+			kind = "isdtemplate"
 		case *v1alpha1.ClusterAnalysisTemplate:
 			kind = "clusteranalysistemplate"
 		case *v1alpha1.Experiment:
@@ -75,6 +77,8 @@ func KindNamespaceName(logCtx *log.Entry) (string, string, string) {
 		kind = "AnalysisRun"
 	} else if nameIf, ok = logCtx.Data["analysistemplate"]; ok {
 		kind = "AnalysisTemplate"
+	} else if nameIf, ok = logCtx.Data["isdtemplate"]; ok {
+		kind = "ISDTemplate"
 	} else if nameIf, ok = logCtx.Data["experiment"]; ok {
 		kind = "Experiment"
 	} else if nameIf, ok = logCtx.Data["clusteranalysistemplate"]; ok {

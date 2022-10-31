@@ -16,6 +16,7 @@ var (
 	RolloutGVR                 = SchemeGroupVersion.WithResource("rollouts")
 	AnalysisRunGVR             = SchemeGroupVersion.WithResource("analysisruns")
 	AnalysisTemplateGVR        = SchemeGroupVersion.WithResource("analysistemplates")
+	ISDTemplateGVR             = SchemeGroupVersion.WithResource("isdtemplates")
 	ClusterAnalysisTemplateGVR = SchemeGroupVersion.WithResource("clusteranalysistemplates")
 	ExperimentGVR              = SchemeGroupVersion.WithResource("experiments")
 )
@@ -42,6 +43,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RolloutList{},
 		&Experiment{},
 		&ExperimentList{},
+		&ISDTemplate{},
+		&ISDTemplateList{},
 		&AnalysisTemplate{},
 		&AnalysisTemplateList{},
 		&ClusterAnalysisTemplate{},

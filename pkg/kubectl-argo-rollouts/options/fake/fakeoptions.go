@@ -49,6 +49,12 @@ func NewFakeArgoRolloutsOptions(obj ...runtime.Object) (*cmdtesting.TestFactory,
 				APIVersion: "argoproj.io/v1alpha1",
 			}
 			rolloutObjs = append(rolloutObjs, o)
+		case *v1alpha1.ISDTemplate:
+			typedO.TypeMeta = metav1.TypeMeta{
+				Kind:       "ISDTemplate",
+				APIVersion: "argoproj.io/v1alpha1",
+			}
+			rolloutObjs = append(rolloutObjs, o)
 		case *v1alpha1.ClusterAnalysisTemplate:
 			typedO.TypeMeta = metav1.TypeMeta{
 				Kind:       "ClusterAnalysisTemplate",
@@ -76,6 +82,7 @@ func NewFakeArgoRolloutsOptions(obj ...runtime.Object) (*cmdtesting.TestFactory,
 	listMapping := map[schema.GroupVersionResource]string{
 		v1alpha1.RolloutGVR:                 rollouts.RolloutKind + "List",
 		v1alpha1.AnalysisTemplateGVR:        rollouts.AnalysisTemplateKind + "List",
+		v1alpha1.ISDTemplateGVR:             rollouts.ISDTemplateKind + "List",
 		v1alpha1.AnalysisRunGVR:             rollouts.AnalysisRunKind + "List",
 		v1alpha1.ExperimentGVR:              rollouts.ExperimentKind + "List",
 		v1alpha1.ClusterAnalysisTemplateGVR: rollouts.ClusterAnalysisTemplateKind + "List",

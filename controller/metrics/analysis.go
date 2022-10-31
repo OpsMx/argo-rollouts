@@ -16,6 +16,7 @@ import (
 type analysisRunCollector struct {
 	runs             rolloutlister.AnalysisRunLister
 	templates        rolloutlister.AnalysisTemplateLister
+	isd              rolloutlister.ISDTemplateLister
 	clusterTemplates rolloutlister.ClusterAnalysisTemplateLister
 }
 
@@ -23,11 +24,13 @@ type analysisRunCollector struct {
 func NewAnalysisRunCollector(
 	analysisRunLister rolloutlister.AnalysisRunLister,
 	analysisTemplateLister rolloutlister.AnalysisTemplateLister,
+	isdTemplateLister rolloutlister.ISDTemplateLister,
 	clusterAnalysisTemplateLister rolloutlister.ClusterAnalysisTemplateLister,
 ) prometheus.Collector {
 	return &analysisRunCollector{
 		runs:             analysisRunLister,
 		templates:        analysisTemplateLister,
+		isd:              isdTemplateLister,
 		clusterTemplates: clusterAnalysisTemplateLister,
 	}
 }
@@ -53,6 +56,14 @@ func (c *analysisRunCollector) Collect(ch chan<- prometheus.Metric) {
 	} else {
 		for _, at := range analysisTemplates {
 			collectAnalysisTemplate(ch, at.Namespace, at.Name, &at.Spec)
+		}
+	}
+	isdTemplates, err := c.isd.List(labels.NewSelector())
+	if err != nil {
+		log.Warnf("Failed to collect isd templates: %v", err)
+	} else {
+		for _, at := range isdTemplates {
+			collectISDTemplate(ch, at.Namespace, at.Name, &at.Spec)
 		}
 	}
 	clusterAnalysisTemplates, err := c.clusterTemplates.List(labels.NewSelector())
@@ -111,4 +122,12 @@ func collectAnalysisTemplate(ch chan<- prometheus.Metric, namespace, name string
 		metricType := metricproviders.Type(metric)
 		addGauge(MetricAnalysisTemplateMetricInfo, 1, metricType, metric.Name)
 	}
+}
+
+func collectISDTemplate(ch chan<- prometheus.Metric, namespace, name string, at *v1alpha1.ISDTemplateSpec) {
+	addGauge := func(desc *prometheus.Desc, v float64, lv ...string) {
+		lv = append([]string{namespace, name}, lv...)
+		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, v, lv...)
+	}
+	addGauge(MetricISDTemplateInfo, 1)
 }

@@ -46,6 +46,14 @@ type ExperimentListerExpansion interface{}
 // ExperimentNamespaceLister.
 type ExperimentNamespaceListerExpansion interface{}
 
+// ISDTemplateListerExpansion allows custom methods to be added to
+// ISDTemplateLister.
+type ISDTemplateListerExpansion interface{}
+
+// ISDTemplateNamespaceListerExpansion allows custom methods to be added to
+// ISDTemplateNamespaceLister.
+type ISDTemplateNamespaceListerExpansion interface{}
+
 // RolloutListerExpansion allows custom methods to be added to
 // RolloutLister.
 type RolloutListerExpansion interface{}

@@ -25,6 +25,7 @@ func newFakeServerConfig(objs ...runtime.Object) ServerConfig {
 	roInformer := factory.Argoproj().V1alpha1().Rollouts()
 	arInformer := factory.Argoproj().V1alpha1().AnalysisRuns()
 	atInformer := factory.Argoproj().V1alpha1().AnalysisTemplates()
+	isdInformer := factory.Argoproj().V1alpha1().ISDTemplates()
 	catInformer := factory.Argoproj().V1alpha1().ClusterAnalysisTemplates()
 	exInformer := factory.Argoproj().V1alpha1().Experiments()
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -34,6 +35,7 @@ func newFakeServerConfig(objs ...runtime.Object) ServerConfig {
 		roInformer.Informer(),
 		arInformer.Informer(),
 		atInformer.Informer(),
+		isdInformer.Informer(),
 		catInformer.Informer(),
 		exInformer.Informer(),
 	} {
@@ -48,6 +50,7 @@ func newFakeServerConfig(objs ...runtime.Object) ServerConfig {
 		RolloutLister:                 roInformer.Lister(),
 		AnalysisRunLister:             arInformer.Lister(),
 		AnalysisTemplateLister:        atInformer.Lister(),
+		ISDTemplateLister:             isdInformer.Lister(),
 		ClusterAnalysisTemplateLister: catInformer.Lister(),
 		ExperimentLister:              exInformer.Lister(),
 		K8SRequestProvider:            &K8sRequestsCountProvider{},

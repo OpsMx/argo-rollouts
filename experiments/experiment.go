@@ -40,6 +40,7 @@ type experimentContext struct {
 	kubeclientset                 kubernetes.Interface
 	argoProjClientset             clientset.Interface
 	analysisTemplateLister        rolloutslisters.AnalysisTemplateLister
+	isdTemplateLister             rolloutslisters.ISDTemplateLister
 	clusterAnalysisTemplateLister rolloutslisters.ClusterAnalysisTemplateLister
 	analysisRunLister             rolloutslisters.AnalysisRunLister
 	replicaSetLister              appslisters.ReplicaSetLister
@@ -64,6 +65,7 @@ func newExperimentContext(
 	argoProjClientset clientset.Interface,
 	replicaSetLister appslisters.ReplicaSetLister,
 	analysisTemplateLister rolloutslisters.AnalysisTemplateLister,
+	isdTemplateLister rolloutslisters.ISDTemplateLister,
 	clusterAnalysisTemplateLister rolloutslisters.ClusterAnalysisTemplateLister,
 	analysisRunLister rolloutslisters.AnalysisRunLister,
 	serviceLister v1.ServiceLister,
@@ -80,6 +82,7 @@ func newExperimentContext(
 		argoProjClientset:             argoProjClientset,
 		replicaSetLister:              replicaSetLister,
 		analysisTemplateLister:        analysisTemplateLister,
+		isdTemplateLister:             isdTemplateLister,
 		clusterAnalysisTemplateLister: clusterAnalysisTemplateLister,
 		analysisRunLister:             analysisRunLister,
 		serviceLister:                 serviceLister,
@@ -417,6 +420,12 @@ func (ec *experimentContext) reconcileAnalysisRun(analysis v1alpha1.ExperimentAn
 				newStatus.Message = msg
 				logCtx.Warn(msg)
 			}
+			if err := ec.verifyISDTemplate(analysis); err != nil {
+				msg := fmt.Sprintf("ISDTemplate verification failed for analysis '%s': %v", analysis.Name, err.Error())
+				newStatus.Phase = v1alpha1.AnalysisPhaseError
+				newStatus.Message = msg
+				logCtx.Warn(msg)
+			}
 		}
 		return
 	}
@@ -660,6 +669,12 @@ func (ec *experimentContext) newAnalysisRun(analysis v1alpha1.ExperimentAnalysis
 // verifyAnalysisTemplate verifies an AnalysisTemplate. For now, it simply means that it exists
 func (ec *experimentContext) verifyAnalysisTemplate(analysis v1alpha1.ExperimentAnalysisTemplateRef) error {
 	_, err := ec.analysisTemplateLister.AnalysisTemplates(ec.ex.Namespace).Get(analysis.TemplateName)
+	return err
+}
+
+// verifyAnalysisTemplate verifies an AnalysisTemplate. For now, it simply means that it exists
+func (ec *experimentContext) verifyISDTemplate(analysis v1alpha1.ExperimentAnalysisTemplateRef) error {
+	_, err := ec.isdTemplateLister.ISDTemplates(ec.ex.Namespace).Get(analysis.TemplateName)
 	return err
 }
 

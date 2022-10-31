@@ -32,6 +32,7 @@ type ArgoprojV1alpha1Interface interface {
 	AnalysisTemplatesGetter
 	ClusterAnalysisTemplatesGetter
 	ExperimentsGetter
+	ISDTemplatesGetter
 	RolloutsGetter
 }
 
@@ -54,6 +55,10 @@ func (c *ArgoprojV1alpha1Client) ClusterAnalysisTemplates() ClusterAnalysisTempl
 
 func (c *ArgoprojV1alpha1Client) Experiments(namespace string) ExperimentInterface {
 	return newExperiments(c, namespace)
+}
+
+func (c *ArgoprojV1alpha1Client) ISDTemplates(namespace string) ISDTemplateInterface {
+	return newISDTemplates(c, namespace)
 }
 
 func (c *ArgoprojV1alpha1Client) Rollouts(namespace string) RolloutInterface {

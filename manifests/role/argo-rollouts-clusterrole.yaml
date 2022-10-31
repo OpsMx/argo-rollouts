@@ -38,6 +38,7 @@ rules:
   - argoproj.io
   resources:
   - analysistemplates
+  - isdtemplates
   - clusteranalysistemplates
   verbs:
   - get

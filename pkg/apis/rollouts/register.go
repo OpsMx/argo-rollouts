@@ -34,6 +34,11 @@ const (
 	AnalysisTemplatePlural   string = "analysistemplates"
 	AnalysisTemplateFullName string = AnalysisTemplatePlural + "." + Group
 
+	ISDTemplateKind     string = "ISDTemplate"
+	ISDTemplateSingular string = "isdtemplate"
+	ISDTemplatePlural   string = "isdtemplates"
+	ISDTemplateFullName string = ISDTemplatePlural + "." + Group
+
 	ClusterAnalysisTemplateKind     string = "ClusterAnalysisTemplate"
 	ClusterAnalysisTemplateSingular string = "clusteranalysistemplate"
 	ClusterAnalysisTemplatePlural   string = "clusteranalysistemplates"

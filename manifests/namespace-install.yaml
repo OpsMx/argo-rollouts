@@ -2716,6 +2716,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -5664,6 +5666,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -8498,6 +8502,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -14726,6 +14732,7 @@ rules:
   - argoproj.io
   resources:
   - analysistemplates
+  - isdtemplates
   - clusteranalysistemplates
   verbs:
   - get
@@ -14919,6 +14926,7 @@ rules:
   - rollouts/status
   - experiments
   - analysistemplates
+  - isdtemplates
   - clusteranalysistemplates
   - analysisruns
   verbs:
@@ -14949,6 +14957,7 @@ rules:
   - rollouts/status
   - experiments
   - analysistemplates
+  - isdtemplates
   - clusteranalysistemplates
   - analysisruns
   verbs:
@@ -14978,6 +14987,7 @@ rules:
   - rollouts/scale
   - experiments
   - analysistemplates
+  - isdtemplates
   - clusteranalysistemplates
   - analysisruns
   verbs:

@@ -39,6 +39,7 @@ var crdPaths = map[string]string{
 	"Rollout":                 "manifests/crds/rollout-crd.yaml",
 	"Experiment":              "manifests/crds/experiment-crd.yaml",
 	"AnalysisTemplate":        "manifests/crds/analysis-template-crd.yaml",
+	"ISDTemplate":             "manifests/crds/isd-template-crd.yaml",
 	"ClusterAnalysisTemplate": "manifests/crds/cluster-analysis-template-crd.yaml",
 	"AnalysisRun":             "manifests/crds/analysis-run-crd.yaml",
 }
@@ -99,6 +100,7 @@ func NewCustomResourceDefinition() []*extensionsobj.CustomResourceDefinition {
 	deleteFile("config/webhook")
 	deleteFile("config/argoproj.io_analysisruns.yaml")
 	deleteFile("config/argoproj.io_analysistemplates.yaml")
+	deleteFile("config/argoproj.io_isdtemplates.yaml")
 	deleteFile("config/argoproj.io_clusteranalysistemplates.yaml")
 	deleteFile("config/argoproj.io_experiments.yaml")
 	deleteFile("config/argoproj.io_rollouts.yaml")
@@ -182,7 +184,7 @@ func createMetadataValidation(un *unstructured.Unstructured) {
 			exValidated = append(exValidated, v)
 		}
 		unstructured.SetNestedSlice(un.Object, exValidated, prePath...)
-	case "ClusterAnalysisTemplate", "AnalysisTemplate", "AnalysisRun":
+	case "ClusterAnalysisTemplate", "AnalysisTemplate", "AnalysisRun", "ISDTemplate":
 		var analysisValidated []interface{}
 		analysisPath := []string{
 			"metrics",
@@ -244,7 +246,7 @@ func removeK8S118Fields(un *unstructured.Unstructured) {
 		// Replace this with "spec.templates[].template.spec.volumes[].ephemeral.volumeClaimTemplate.spec.resources.{limits/requests}"
 		// when it's ok to only support k8s 1.17+
 		setValidationOverride(un, preserveUnknownFields, "spec.templates[].template.spec.volumes")
-	case "ClusterAnalysisTemplate", "AnalysisTemplate", "AnalysisRun":
+	case "ClusterAnalysisTemplate", "AnalysisTemplate", "AnalysisRun", "ISDTemplate":
 		setValidationOverride(un, preserveUnknownFields, "spec.metrics[].provider.job.spec.template.spec.containers[].resources.limits")
 		setValidationOverride(un, preserveUnknownFields, "spec.metrics[].provider.job.spec.template.spec.containers[].resources.requests")
 		setValidationOverride(un, preserveUnknownFields, "spec.metrics[].provider.job.spec.template.spec.initContainers[].resources.limits")

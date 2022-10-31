@@ -178,6 +178,7 @@ func newCommand() *cobra.Command {
 				tolerantinformer.NewTolerantExperimentInformer(dynamicInformerFactory),
 				tolerantinformer.NewTolerantAnalysisRunInformer(dynamicInformerFactory),
 				tolerantinformer.NewTolerantAnalysisTemplateInformer(dynamicInformerFactory),
+				tolerantinformer.NewTolerantISDTemplateInformer(dynamicInformerFactory),
 				tolerantinformer.NewTolerantClusterAnalysisTemplateInformer(clusterDynamicInformerFactory),
 				istioPrimaryDynamicClient,
 				istioDynamicInformerFactory.ForResource(istioutil.GetIstioVirtualServiceGVR()).Informer(),

@@ -46,6 +46,7 @@ func newTestContext(ex *v1alpha1.Experiment, objects ...runtime.Object) *experim
 	rolloutsI := informers.NewSharedInformerFactory(rolloutclient, noResyncPeriodFunc())
 	analysisRunLister := rolloutsI.Argoproj().V1alpha1().AnalysisRuns().Lister()
 	analysisTemplateLister := rolloutsI.Argoproj().V1alpha1().AnalysisTemplates().Lister()
+	isdTemplateLister := rolloutsI.Argoproj().V1alpha1().ISDTemplates().Lister()
 	clusterAnalysisTemplateLister := rolloutsI.Argoproj().V1alpha1().ClusterAnalysisTemplates().Lister()
 	serviceLister := k8sI.Core().V1().Services().Lister()
 
@@ -57,6 +58,7 @@ func newTestContext(ex *v1alpha1.Experiment, objects ...runtime.Object) *experim
 		rolloutclient,
 		rsLister,
 		analysisTemplateLister,
+		isdTemplateLister,
 		clusterAnalysisTemplateLister,
 		analysisRunLister,
 		serviceLister,

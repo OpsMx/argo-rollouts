@@ -216,6 +216,7 @@ func (s *E2ESuite) deleteResources(req *labels.Requirement, propagationPolicy me
 		rov1.AnalysisRunGVR,
 		rov1.AnalysisTemplateGVR,
 		rov1.ClusterAnalysisTemplateGVR,
+		rov1.ISDTemplateGVR,
 		rov1.ExperimentGVR,
 		deploymentGVR,
 		serviceGVR,

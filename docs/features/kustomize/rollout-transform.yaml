@@ -39,6 +39,18 @@ nameReference:
     kind: AnalysisTemplate
   - path: spec/metrics/provider/job/spec/template/spec/volumes/projected/sources/configMap/name
     kind: AnalysisTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/configMap/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/env/valueFrom/configMapKeyRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/env/valueFrom/configMapKeyRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/envFrom/configMapRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/envFrom/configMapRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/projected/sources/configMap/name
+    kind: ISDTemplate
 - kind: Secret
   version: v1
   fieldSpecs:
@@ -84,6 +96,20 @@ nameReference:
     kind: AnalysisTemplate
   - path: spec/metrics/provider/job/spec/template/spec/volumes/projected/sources/secret/name
     kind: AnalysisTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/secret/secretName
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/env/valueFrom/secretKeyRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/env/valueFrom/secretKeyRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/envFrom/secretRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/envFrom/secretRef/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/imagePullSecrets/name
+    kind: ISDTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/projected/sources/secret/name
+    kind: ISDTemplate
 - kind: ServiceAccount
   version: v1
   fieldSpecs:
@@ -93,6 +119,8 @@ nameReference:
     kind: Experiment
   - path: spec/metrics/provider/job/spec/template/spec/serviceAccountName
     kind: AnalysisTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/serviceAccountName
+    kind: ISDTemplate
 - kind: PersistentVolumeClaim
   version: v1
   fieldSpecs:
@@ -102,6 +130,8 @@ nameReference:
     kind: Experiment
   - path: spec/metrics/provider/job/spec/template/spec/volumes/persistentVolumeClaim/claimName
     kind: AnalysisTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/persistentVolumeClaim/claimName
+    kind: ISDTemplate
 - kind: PriorityClass
   version: v1
   group: scheduling.k8s.io
@@ -112,6 +142,8 @@ nameReference:
     kind: Experiment
   - path: spec/metrics/provider/job/spec/template/spec/priorityClassName
     kind: AnalysisTemplate
+  - path: spec/metrics/provider/job/spec/isdtemplate/spec/priorityClassName
+    kind: ISDTemplate
 
 # The name references below are unique to Rollouts and not applicable to Deployment
 - kind: Service
@@ -165,6 +197,21 @@ nameReference:
   - path: spec/strategy/canary/steps/experiment/analyses/templateName
     kind: Rollout
   - path: spec/analyses/templateName
+    kind: Experiment
+- kind: ISDTemplate
+  group: argoproj.io
+  fieldSpecs:
+  - path: spec/strategy/blueGreen/prePromotionAnalysis/templates/isdtemplateName
+    kind: Rollout
+  - path: spec/strategy/blueGreen/postPromotionAnalysis/templates/isdtemplateName
+    kind: Rollout
+  - path: spec/strategy/canary/analysis/templates/isdtemplateName
+    kind: Rollout
+  - path: spec/strategy/canary/steps/analysis/templates/isdtemplateName
+    kind: Rollout
+  - path: spec/strategy/canary/steps/experiment/analyses/isdtemplateName
+    kind: Rollout
+  - path: spec/analyses/isdtemplateName
     kind: Experiment
 - kind: Rollout
   fieldSpecs:
@@ -261,6 +308,24 @@ varReference:
   kind: AnalysisTemplate
 - path: spec/metrics/provider/job/spec/template/spec/volumes/nfs/server
   kind: AnalysisTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/args
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/command
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/env/value
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/containers/volumeMounts/mountPath
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/args
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/command
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/env/value
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/initContainers/volumeMounts/mountPath
+  kind: ISDTemplate
+- path: spec/metrics/provider/job/spec/isdtemplate/spec/volumes/nfs/server
+  kind: ISDTemplate
 
 # https://github.com/kubernetes-sigs/kustomize/blob/master/api/konfig/builtinpluginconsts/replicas.go
 replicas:

@@ -430,6 +430,7 @@ func (c *rolloutContext) newAnalysisRunFromRollout(rolloutAnalysis *v1alpha1.Rol
 	var err error
 	templates := make([]*v1alpha1.AnalysisTemplate, 0)
 	clusterTemplates := make([]*v1alpha1.ClusterAnalysisTemplate, 0)
+	isdTemplates := make([]*v1alpha1.ISDTemplate, 0)
 	for _, templateRef := range rolloutAnalysis.Templates {
 		if templateRef.ClusterScope {
 			template, err := c.clusterAnalysisTemplateLister.Get(templateRef.TemplateName)
@@ -449,6 +450,15 @@ func (c *rolloutContext) newAnalysisRunFromRollout(rolloutAnalysis *v1alpha1.Rol
 				return nil, err
 			}
 			templates = append(templates, template)
+
+			isdtemplate, err := c.isdTemplateLister.ISDTemplates(c.rollout.Namespace).Get(templateRef.TemplateName)
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					c.log.Warnf("ISDTemplate '%s' not found", templateRef.TemplateName)
+				}
+				return nil, err
+			}
+			isdTemplates = append(isdTemplates, isdtemplate)
 		}
 
 	}

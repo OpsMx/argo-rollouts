@@ -50,6 +50,7 @@ type Controller struct {
 	replicaSetLister              appslisters.ReplicaSetLister
 	experimentsLister             listers.ExperimentLister
 	analysisTemplateLister        listers.AnalysisTemplateLister
+	isdTemplateLister             listers.ISDTemplateLister
 	clusterAnalysisTemplateLister listers.ClusterAnalysisTemplateLister
 	analysisRunLister             listers.AnalysisRunLister
 	serviceLister                 listersv1.ServiceLister
@@ -57,6 +58,7 @@ type Controller struct {
 	replicaSetSynced              cache.InformerSynced
 	experimentSynced              cache.InformerSynced
 	analysisTemplateSynced        cache.InformerSynced
+	isdTemplateSynched            cache.InformerSynced
 	clusterAnalysisTemplateSynced cache.InformerSynced
 	analysisRunSynced             cache.InformerSynced
 
@@ -87,6 +89,7 @@ type ControllerConfig struct {
 	ExperimentsInformer             informers.ExperimentInformer
 	AnalysisRunInformer             informers.AnalysisRunInformer
 	AnalysisTemplateInformer        informers.AnalysisTemplateInformer
+	ISDTemplateInformer             informers.ISDTemplateInformer
 	ClusterAnalysisTemplateInformer informers.ClusterAnalysisTemplateInformer
 	ServiceInformer                 informersv1.ServiceInformer
 	ResyncPeriod                    time.Duration
@@ -111,6 +114,7 @@ func NewController(cfg ControllerConfig) *Controller {
 		replicaSetLister:              cfg.ReplicaSetInformer.Lister(),
 		experimentsLister:             cfg.ExperimentsInformer.Lister(),
 		analysisTemplateLister:        cfg.AnalysisTemplateInformer.Lister(),
+		isdTemplateLister:             cfg.ISDTemplateInformer.Lister(),
 		clusterAnalysisTemplateLister: cfg.ClusterAnalysisTemplateInformer.Lister(),
 		analysisRunLister:             cfg.AnalysisRunInformer.Lister(),
 		serviceLister:                 cfg.ServiceInformer.Lister(),
@@ -122,6 +126,7 @@ func NewController(cfg ControllerConfig) *Controller {
 		experimentSynced:              cfg.ExperimentsInformer.Informer().HasSynced,
 		analysisRunSynced:             cfg.AnalysisRunInformer.Informer().HasSynced,
 		analysisTemplateSynced:        cfg.AnalysisTemplateInformer.Informer().HasSynced,
+		isdTemplateSynched:            cfg.ISDTemplateInformer.Informer().HasSynced,
 		clusterAnalysisTemplateSynced: cfg.ClusterAnalysisTemplateInformer.Informer().HasSynced,
 		recorder:                      cfg.Recorder,
 		resyncPeriod:                  cfg.ResyncPeriod,
@@ -305,6 +310,7 @@ func (ec *Controller) syncHandler(ctx context.Context, key string) error {
 		ec.argoProjClientset,
 		ec.replicaSetLister,
 		ec.analysisTemplateLister,
+		ec.isdTemplateLister,
 		ec.clusterAnalysisTemplateLister,
 		ec.analysisRunLister,
 		ec.serviceLister,

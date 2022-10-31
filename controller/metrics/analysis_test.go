@@ -161,7 +161,7 @@ func TestCollectAnalysisRuns(t *testing.T) {
 func testAnalysisRunDescribe(t *testing.T, fakeAnalysisRun string, expectedResponse string) {
 	registry := prometheus.NewRegistry()
 	serverCfg := newFakeServerConfig(newFakeAnalysisRun(fakeAnalysisRun))
-	registry.MustRegister(NewAnalysisRunCollector(serverCfg.AnalysisRunLister, serverCfg.AnalysisTemplateLister, serverCfg.ClusterAnalysisTemplateLister))
+	registry.MustRegister(NewAnalysisRunCollector(serverCfg.AnalysisRunLister, serverCfg.AnalysisTemplateLister, serverCfg.ISDTemplateLister, serverCfg.ClusterAnalysisTemplateLister))
 	mux := http.NewServeMux()
 	mux.Handle(MetricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	testHttpResponse(t, mux, expectedResponse, assert.Contains)
@@ -205,7 +205,7 @@ analysis_template_metric_info{metric="web-metric-2",name="http-benchmark-test",n
 	at := newFakeAnalysisTemplate(fakeAnalysisTemplate)
 	cat := newFakeClusterAnalysisTemplate(fakeClusterAnalysisTemplate)
 	serverCfg := newFakeServerConfig(at, cat)
-	registry.MustRegister(NewAnalysisRunCollector(serverCfg.AnalysisRunLister, serverCfg.AnalysisTemplateLister, serverCfg.ClusterAnalysisTemplateLister))
+	registry.MustRegister(NewAnalysisRunCollector(serverCfg.AnalysisRunLister, serverCfg.AnalysisTemplateLister, serverCfg.ISDTemplateLister, serverCfg.ClusterAnalysisTemplateLister))
 	mux := http.NewServeMux()
 	mux.Handle(MetricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	testHttpResponse(t, mux, expectedResponse, assert.Contains)

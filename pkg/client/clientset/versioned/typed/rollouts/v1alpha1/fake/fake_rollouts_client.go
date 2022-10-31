@@ -44,6 +44,10 @@ func (c *FakeArgoprojV1alpha1) Experiments(namespace string) v1alpha1.Experiment
 	return &FakeExperiments{c, namespace}
 }
 
+func (c *FakeArgoprojV1alpha1) ISDTemplates(namespace string) v1alpha1.ISDTemplateInterface {
+	return &FakeISDTemplates{c, namespace}
+}
+
 func (c *FakeArgoprojV1alpha1) Rollouts(namespace string) v1alpha1.RolloutInterface {
 	return &FakeRollouts{c, namespace}
 }

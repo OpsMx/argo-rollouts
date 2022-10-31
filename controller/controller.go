@@ -128,6 +128,7 @@ type Manager struct {
 	experimentSynced              cache.InformerSynced
 	analysisRunSynced             cache.InformerSynced
 	analysisTemplateSynced        cache.InformerSynced
+	isdTemplateSynced             cache.InformerSynced
 	clusterAnalysisTemplateSynced cache.InformerSynced
 	serviceSynced                 cache.InformerSynced
 	ingressSynced                 cache.InformerSynced
@@ -174,6 +175,7 @@ func NewManager(
 	experimentsInformer informers.ExperimentInformer,
 	analysisRunInformer informers.AnalysisRunInformer,
 	analysisTemplateInformer informers.AnalysisTemplateInformer,
+	isdTemplateInformer informers.ISDTemplateInformer,
 	clusterAnalysisTemplateInformer informers.ClusterAnalysisTemplateInformer,
 	istioPrimaryDynamicClient dynamic.Interface,
 	istioVirtualServiceInformer cache.SharedIndexInformer,
@@ -205,6 +207,7 @@ func NewManager(
 		RolloutLister:                 rolloutsInformer.Lister(),
 		AnalysisRunLister:             analysisRunInformer.Lister(),
 		AnalysisTemplateLister:        analysisTemplateInformer.Lister(),
+		ISDTemplateLister:             isdTemplateInformer.Lister(),
 		ClusterAnalysisTemplateLister: clusterAnalysisTemplateInformer.Lister(),
 		ExperimentLister:              experimentsInformer.Lister(),
 		K8SRequestProvider:            k8sRequestProvider,
@@ -245,6 +248,7 @@ func NewManager(
 		ExperimentInformer:              experimentsInformer,
 		AnalysisRunInformer:             analysisRunInformer,
 		AnalysisTemplateInformer:        analysisTemplateInformer,
+		ISDTemplateInformer:             isdTemplateInformer,
 		ClusterAnalysisTemplateInformer: clusterAnalysisTemplateInformer,
 		IstioPrimaryDynamicClient:       istioPrimaryDynamicClient,
 		IstioVirtualServiceInformer:     istioVirtualServiceInformer,
@@ -268,6 +272,7 @@ func NewManager(
 		ExperimentsInformer:             experimentsInformer,
 		AnalysisRunInformer:             analysisRunInformer,
 		AnalysisTemplateInformer:        analysisTemplateInformer,
+		ISDTemplateInformer:             isdTemplateInformer,
 		ClusterAnalysisTemplateInformer: clusterAnalysisTemplateInformer,
 		ServiceInformer:                 servicesInformer,
 		ResyncPeriod:                    resyncPeriod,
@@ -324,6 +329,7 @@ func NewManager(
 		experimentSynced:                   experimentsInformer.Informer().HasSynced,
 		analysisRunSynced:                  analysisRunInformer.Informer().HasSynced,
 		analysisTemplateSynced:             analysisTemplateInformer.Informer().HasSynced,
+		isdTemplateSynced:                  isdTemplateInformer.Informer().HasSynced,
 		clusterAnalysisTemplateSynced:      clusterAnalysisTemplateInformer.Informer().HasSynced,
 		replicasSetSynced:                  replicaSetInformer.Informer().HasSynced,
 		configMapSynced:                    configMapInformer.Informer().HasSynced,
@@ -463,7 +469,7 @@ func (c *Manager) startLeading(ctx context.Context, rolloutThreadiness, serviceT
 
 	// Wait for the caches to be synced before starting workers
 	log.Info("Waiting for controller's informer caches to sync")
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.serviceSynced, c.ingressSynced, c.jobSynced, c.rolloutSynced, c.experimentSynced, c.analysisRunSynced, c.analysisTemplateSynced, c.replicasSetSynced, c.configMapSynced, c.secretSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.serviceSynced, c.ingressSynced, c.jobSynced, c.rolloutSynced, c.experimentSynced, c.analysisRunSynced, c.analysisTemplateSynced, c.isdTemplateSynced, c.replicasSetSynced, c.configMapSynced, c.secretSynced); !ok {
 		log.Fatalf("failed to wait for caches to sync, exiting")
 	}
 	// only wait for cluster scoped informers to sync if we are running in cluster-wide mode

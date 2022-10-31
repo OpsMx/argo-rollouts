@@ -249,6 +249,7 @@ func TestNewManager(t *testing.T) {
 		i.Argoproj().V1alpha1().Experiments(),
 		i.Argoproj().V1alpha1().AnalysisRuns(),
 		i.Argoproj().V1alpha1().AnalysisTemplates(),
+		i.Argoproj().V1alpha1().ISDTemplates(),
 		i.Argoproj().V1alpha1().ClusterAnalysisTemplates(),
 		dynamicClient,
 		istioVirtualServiceInformer,

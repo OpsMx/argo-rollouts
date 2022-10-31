@@ -98,6 +98,7 @@ type ControllerConfig struct {
 	AnalysisRunInformer             informers.AnalysisRunInformer
 	AnalysisTemplateInformer        informers.AnalysisTemplateInformer
 	ClusterAnalysisTemplateInformer informers.ClusterAnalysisTemplateInformer
+	ISDTemplateInformer             informers.ISDTemplateInformer
 	ReplicaSetInformer              appsinformers.ReplicaSetInformer
 	ServicesInformer                coreinformers.ServiceInformer
 	IngressWrapper                  IngressWrapper
@@ -139,6 +140,7 @@ type reconcilerBase struct {
 	analysisRunLister             listers.AnalysisRunLister
 	analysisTemplateLister        listers.AnalysisTemplateLister
 	clusterAnalysisTemplateLister listers.ClusterAnalysisTemplateLister
+	isdTemplateLister             listers.ISDTemplateLister
 	IstioController               *istio.IstioController
 
 	podRestarter RolloutPodRestarter
@@ -191,6 +193,7 @@ func NewController(cfg ControllerConfig) *Controller {
 		ingressWrapper:                cfg.IngressWrapper,
 		experimentsLister:             cfg.ExperimentInformer.Lister(),
 		analysisRunLister:             cfg.AnalysisRunInformer.Lister(),
+		isdTemplateLister:             cfg.ISDTemplateInformer.Lister(),
 		analysisTemplateLister:        cfg.AnalysisTemplateInformer.Lister(),
 		clusterAnalysisTemplateLister: cfg.ClusterAnalysisTemplateInformer.Lister(),
 		recorder:                      cfg.Recorder,
@@ -561,6 +564,12 @@ func (c *rolloutContext) getRolloutReferencedResources() (*validation.Referenced
 	}
 	refResources.AnalysisTemplatesWithType = *analysisTemplates
 
+	isdTemplates, err := c.getReferencedRolloutISD()
+	if err != nil {
+		return nil, err
+	}
+	refResources.ISDTemplatesWithType = *isdTemplates
+
 	ingresses, err := c.getReferencedIngresses()
 	if err != nil {
 		return nil, err
@@ -757,6 +766,32 @@ func (c *rolloutContext) getReferencedRolloutAnalyses() (*[]validation.AnalysisT
 	return &analysisTemplates, nil
 }
 
+func (c *rolloutContext) getReferencedRolloutISD() (*[]validation.ISDTemplatesWithType, error) {
+	isdTemplates := make([]validation.ISDTemplatesWithType, 0)
+	if c.rollout.Spec.Strategy.Canary != nil {
+		canary := c.rollout.Spec.Strategy.Canary
+		for i, step := range canary.Steps {
+			if step.Analysis != nil {
+				templates, err := c.getReferencedISDTemplates(c.rollout, step.Analysis, validation.ISDInlineAnalysis, i)
+				if err != nil {
+					return nil, err
+				}
+				templates.Args = step.Analysis.Args
+				isdTemplates = append(isdTemplates, *templates)
+			}
+		}
+		if canary.Analysis != nil {
+			templates, err := c.getReferencedISDTemplates(c.rollout, &canary.Analysis.RolloutAnalysis, validation.ISDBackgroundAnalysis, 0)
+			if err != nil {
+				return nil, err
+			}
+			templates.Args = canary.Analysis.Args
+			isdTemplates = append(isdTemplates, *templates)
+		}
+	}
+	return &isdTemplates, nil
+}
+
 func (c *rolloutContext) getReferencedAnalysisTemplates(rollout *v1alpha1.Rollout, rolloutAnalysis *v1alpha1.RolloutAnalysis, templateType validation.AnalysisTemplateType, canaryStepIndex int) (*validation.AnalysisTemplatesWithType, error) {
 	templates := make([]*v1alpha1.AnalysisTemplate, 0)
 	clusterTemplates := make([]*v1alpha1.ClusterAnalysisTemplate, 0)
@@ -789,6 +824,28 @@ func (c *rolloutContext) getReferencedAnalysisTemplates(rollout *v1alpha1.Rollou
 		ClusterAnalysisTemplates: clusterTemplates,
 		TemplateType:             templateType,
 		CanaryStepIndex:          canaryStepIndex,
+	}, nil
+}
+
+func (c *rolloutContext) getReferencedISDTemplates(rollout *v1alpha1.Rollout, rolloutAnalysis *v1alpha1.RolloutAnalysis, templateType validation.ISDTemplateType, canaryStepIndex int) (*validation.ISDTemplatesWithType, error) {
+	templates := make([]*v1alpha1.ISDTemplate, 0)
+	fldPath := validation.GetISDTemplateWithTypeFieldPath(templateType, canaryStepIndex)
+
+	for _, templateRef := range rolloutAnalysis.Templates {
+		template, err := c.isdTemplateLister.ISDTemplates(c.rollout.Namespace).Get(templateRef.TemplateName)
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				return nil, field.Invalid(fldPath, templateRef.TemplateName, fmt.Sprintf("ISDTemplate '%s' not found", templateRef.TemplateName))
+			}
+			return nil, err
+		}
+		templates = append(templates, template)
+	}
+
+	return &validation.ISDTemplatesWithType{
+		ISDTemplates:    templates,
+		TemplateType:    templateType,
+		CanaryStepIndex: canaryStepIndex,
 	}, nil
 }
 

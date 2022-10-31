@@ -140,6 +140,22 @@ var (
 	)
 )
 
+var (
+	MetricISDTemplateInfo = prometheus.NewDesc(
+		"isd_template_info",
+		"Information about isd templates.",
+		append(namespaceNameLabels),
+		nil,
+	)
+
+	MetricISDTemplateMetricInfo = prometheus.NewDesc(
+		"isd_template_metric_info",
+		"Information on metrics in isd templates.",
+		append(namespaceNameLabels, "type", "metric"),
+		nil,
+	)
+)
+
 // Experiment metrics
 var (
 	MetricExperimentReconcile = prometheus.NewHistogramVec(

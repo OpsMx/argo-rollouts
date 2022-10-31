@@ -754,6 +754,51 @@ message HeaderRoutingMatch {
   optional StringMatch headerValue = 2;
 }
 
+// ISDTemplate holds the template for performing canary analysis
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:path=isdtemplates,shortName=at
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="Time since resource was created"
+message ISDTemplate {
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  optional ISDTemplateSpec spec = 2;
+}
+
+// ISDTemplateList is a list of ISDTemplate resources
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+message ISDTemplateList {
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ISDTemplate items = 2;
+}
+
+// ISDTemplateSpec is the specification for a ISDTemplate resource
+message ISDTemplateSpec {
+  // Metrics contains the list of metrics to query as part of an analysis run
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  repeated Metric metrics = 1;
+
+  // Args are the list of arguments to the template
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated Argument args = 2;
+
+  // DryRun object contains the settings for running the analysis in Dry-Run mode
+  // +patchMergeKey=metricName
+  // +patchStrategy=merge
+  // +optional
+  repeated DryRun dryRun = 3;
+
+  // MeasurementRetention object contains the settings for retaining the number of measurements during the analysis
+  // +patchMergeKey=metricName
+  // +patchStrategy=merge
+  // +optional
+  repeated MeasurementRetention measurementRetention = 4;
+}
+
 // InfluxdbMetric defines the InfluxDB Flux query to perform canary analysis
 message InfluxdbMetric {
   // Profile is the name of the secret holding InfluxDB account configuration
@@ -1058,6 +1103,8 @@ message OPSMXMetric {
   optional string lookBackType = 14;
 
   optional int64 delay = 15;
+
+  optional bool gitops = 16;
 }
 
 message OPSMXService {
