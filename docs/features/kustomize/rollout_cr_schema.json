@@ -4186,6 +4186,9 @@
                                                     "gateUrl": {
                                                         "type": "string"
                                                     },
+                                                    "gitops": {
+                                                        "type": "boolean"
+                                                    },
                                                     "globalLogTemplate": {
                                                         "type": "string"
                                                     },
@@ -8559,6 +8562,9 @@
                                                     "gateUrl": {
                                                         "type": "string"
                                                     },
+                                                    "gitops": {
+                                                        "type": "boolean"
+                                                    },
                                                     "globalLogTemplate": {
                                                         "type": "string"
                                                     },
@@ -12931,6 +12937,9 @@
                                                     },
                                                     "gateUrl": {
                                                         "type": "string"
+                                                    },
+                                                    "gitops": {
+                                                        "type": "boolean"
                                                     },
                                                     "globalLogTemplate": {
                                                         "type": "string"

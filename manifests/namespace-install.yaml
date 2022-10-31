@@ -2716,6 +2716,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -5664,6 +5666,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -8498,6 +8502,8 @@ spec:
                               type: string
                             gateUrl:
                               type: string
+                            gitops:
+                              type: boolean
                             globalLogTemplate:
                               type: string
                             globalMetricTemplate:
@@ -15046,7 +15052,7 @@ spec:
       containers:
       - args:
         - --namespaced
-        image: quay.io/argoproj/argo-rollouts:latest
+        image: isdjunaid:latest
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
