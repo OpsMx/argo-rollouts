@@ -631,7 +631,7 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
 	}
-
+	log.Infof("POST DATA: %v", status)
 	//if the status is Running, resume analysis after delay
 	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
