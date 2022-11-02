@@ -254,7 +254,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 					return nil, err
 				}
 				json.Unmarshal(data, &templateCheckSave)
-				if templateCheckSave.Message != "" {
+				if templateCheckSave.Error != "" && templateCheckSave.Message != "" {
 					errorss := fmt.Sprintf("%v", templateCheckSave.Message)
 					err = errors.New(errorss)
 					return nil, err
