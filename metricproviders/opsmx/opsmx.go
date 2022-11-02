@@ -245,6 +245,13 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			if err != nil {
 				return nil, err
 			}
+			var checkerror map[string]interface{}
+			json.Unmarshal(data, &checkerror)
+			if checkerror["message"] != "" {
+				errorss := fmt.Sprintf("%v", checkerror["message"])
+				err = errors.New(errorss)
+				return nil, err
+			}
 			var templateVerification bool
 			json.Unmarshal(data, &templateVerification)
 			templateData[templateName.String()] = sha1Code
