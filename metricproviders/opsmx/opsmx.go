@@ -98,6 +98,14 @@ func roundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
+func isJSON(s string) bool {
+	var j map[string]interface{}
+	if err := json.Unmarshal([]byte(s), &j); err != nil {
+		return false
+	}
+	return true
+}
+
 func makeRequest(client http.Client, requestType string, url string, body string, user string) ([]byte, error) {
 	reqBody := strings.NewReader(body)
 	req, _ := http.NewRequest(
@@ -225,7 +233,7 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			valid = true
 			sha1Code := encryptString(templates.Items[i].Data["Json"])
 			templateName := gjson.Get(templates.Items[i].Data["Json"], "templateName")
-			if templateName.String() == "" {
+			if !isJSON(templates.Items[i].Data["Json"]) {
 				err = errors.New("invalid template json provided")
 				return nil, err
 			}
@@ -328,9 +336,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 	newMeasurement := v1alpha1.Measurement{
 		StartedAt: &startTime,
 	}
-	log.Infof("Metric data: %v", metric.Provider.OPSMX)
-	log.Infof("Run data: %v", run)
-	log.Infof("\n\nRun Namespace: %v\n\n", run.Namespace)
 	secretData, err := getDataSecret(run, metric, p.kubeclientset, true)
 	if err != nil {
 		return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -631,7 +636,6 @@ func (p *Provider) Resume(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric, mea
 	if metric.Provider.OPSMX.LookBackType != "" {
 		measurement.Metadata["Current intervalNo"] = fmt.Sprintf("%v", reportUrlJson["intervalNo"])
 	}
-	log.Infof("POST DATA: %v", status)
 	//if the status is Running, resume analysis after delay
 	if status["status"] == "RUNNING" {
 		resumeTime := metav1.NewTime(timeutil.Now().Add(resumeAfter))
