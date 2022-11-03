@@ -209,12 +209,14 @@ func encryptString(s string) string {
 	return sha1_hash
 }
 
-func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interface, client http.Client, secretData map[string]string, template string) (string, error) {
+func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interface, client http.Client, secretData map[string]string, templateName string) (string, error) {
 	var templateData string
-	templates, err := kubeclientset.CoreV1().ConfigMaps(run.Namespace).Get(context.TODO(), template, metav1.GetOptions{})
+	log.Infof("inside get temp sha1")
+	templates, err := kubeclientset.CoreV1().ConfigMaps(run.Namespace).Get(context.TODO(), templateName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
+	log.Infof("%v", templates)
 	type templateResponse struct {
 		Status  string `json:"status,omitempty"`
 		Message string `json:"message,omitempty"`
@@ -230,12 +232,13 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 		}
 		valid = true
 		sha1Code := encryptString(templates.Data["Json"])
+		templateData = sha1Code
 		if !isJSON(templates.Data["Json"]) {
 			err = errors.New("invalid template json provided")
 			return "", err
 		}
 		templateType := templates.Data["TemplateType"]
-		tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, template)
+		tempLink := fmt.Sprintf(templateApi, sha1Code, templateType, templateName)
 		s := []string{secretData["gateUrl"], tempLink}
 		templateUrl := strings.Join(s, "")
 		data, err := makeRequest(client, "GET", templateUrl, "", secretData["user"])
@@ -454,6 +457,7 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 				var templateData string
 				if metric.Provider.OPSMX.GitOPS && item.LogTemplateVersion == "" {
+					log.Infof("HERE")
 					templateData, err = getTemplateData(run, p.kubeclientset, p.client, secretData, tempName)
 					if err != nil {
 						return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -514,7 +518,8 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 				deployment.Canary.Metric[serviceName]["template"] = tempName
 
 				var templateData string
-				if metric.Provider.OPSMX.GitOPS {
+				if metric.Provider.OPSMX.GitOPS && item.MetricTemplateVersion == "" {
+					log.Infof("HERE")
 					templateData, err = getTemplateData(run, p.kubeclientset, p.client, secretData, tempName)
 					if err != nil {
 						return metricutil.MarkMeasurementError(newMeasurement, err)
