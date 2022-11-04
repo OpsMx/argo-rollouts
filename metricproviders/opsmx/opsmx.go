@@ -211,12 +211,11 @@ func encryptString(s string) string {
 
 func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interface, client http.Client, secretData map[string]string, templateName string) (string, error) {
 	var templateData string
-	log.Infof("inside get temp sha1")
 	templates, err := kubeclientset.CoreV1().ConfigMaps(run.Namespace).Get(context.TODO(), templateName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
-	log.Infof("%v", templates)
+
 	type templateResponse struct {
 		Status  string `json:"status,omitempty"`
 		Message string `json:"message,omitempty"`
@@ -457,7 +456,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 				var templateData string
 				if metric.Provider.OPSMX.GitOPS && item.LogTemplateVersion == "" {
-					log.Infof("HERE")
 					templateData, err = getTemplateData(run, p.kubeclientset, p.client, secretData, tempName)
 					if err != nil {
 						return metricutil.MarkMeasurementError(newMeasurement, err)
@@ -519,7 +517,6 @@ func (p *Provider) Run(run *v1alpha1.AnalysisRun, metric v1alpha1.Metric) v1alph
 
 				var templateData string
 				if metric.Provider.OPSMX.GitOPS && item.MetricTemplateVersion == "" {
-					log.Infof("HERE")
 					templateData, err = getTemplateData(run, p.kubeclientset, p.client, secretData, tempName)
 					if err != nil {
 						return metricutil.MarkMeasurementError(newMeasurement, err)
