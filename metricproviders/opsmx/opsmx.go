@@ -616,7 +616,13 @@ func processResume(data []byte, metric v1alpha1.Metric, measurement v1alpha1.Mea
 		canaryScore = fmt.Sprintf("%v", finalScore["overallScore"])
 	}
 
-	score, _ := strconv.Atoi(canaryScore)
+	var score int
+	if strings.Contains(canaryScore, ".") {
+		floatScore, _ := strconv.ParseFloat(canaryScore, 64)
+		score = int(roundFloat(floatScore, 0))
+	} else {
+		score, _ = strconv.Atoi(canaryScore)
+	}
 	measurement.Value = canaryScore
 	measurement.Phase = evaluateResult(score, int(metric.Provider.OPSMX.Threshold.Pass), int(metric.Provider.OPSMX.Threshold.Marginal))
 	if measurement.Phase == "Failed" && metric.Provider.OPSMX.LookBackType != "" {
