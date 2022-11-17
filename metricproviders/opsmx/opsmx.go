@@ -217,10 +217,9 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 	}
 
 	type templateResponse struct {
-		Status  string `json:"status,omitempty"`
-		Message string `json:"message,omitempty"`
-		Path    string `json:"path,omitempty"`
-		Error   string `json:"error,omitempty"`
+		Status       string `json:"status,omitempty"`
+		Path         string `json:"path,omitempty"`
+		ErrorMessage string `json:"errorMessage,omitempty"`
 	}
 	var templateCheckSave templateResponse
 	var valid bool
@@ -252,8 +251,8 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 				return "", err
 			}
 			json.Unmarshal(data, &templateCheckSave)
-			if templateCheckSave.Error != "" && templateCheckSave.Message != "" {
-				errorss := fmt.Sprintf("%v", templateCheckSave.Message)
+			if templateCheckSave.ErrorMessage != "" {
+				errorss := fmt.Sprintf("%v", templateCheckSave.ErrorMessage)
 				err = errors.New(errorss)
 				return "", err
 			}
