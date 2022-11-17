@@ -215,13 +215,6 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 	if err != nil {
 		return "", err
 	}
-
-	type templateResponse struct {
-		Status       string `json:"status,omitempty"`
-		Path         string `json:"path,omitempty"`
-		ErrorMessage string `json:"errorMessage,omitempty"`
-	}
-	var templateCheckSave templateResponse
 	var valid bool
 	if templates.Data["Template"] == "ISDTemplate" {
 		if templates.Data["TemplateType"] == "" || templates.Data["Json"] == "" {
@@ -250,9 +243,10 @@ func getTemplateData(run *v1alpha1.AnalysisRun, kubeclientset kubernetes.Interfa
 			if err != nil {
 				return "", err
 			}
-			json.Unmarshal(data, &templateCheckSave)
-			if templateCheckSave.ErrorMessage != "" {
-				errorss := fmt.Sprintf("%v", templateCheckSave.ErrorMessage)
+			var templateCheck map[string]interface{}
+			json.Unmarshal(data, &templateCheck)
+			if templateCheck["errorMessage"] != "" {
+				errorss := fmt.Sprintf("%v", templateCheck["errorMessage"])
 				err = errors.New(errorss)
 				return "", err
 			}
