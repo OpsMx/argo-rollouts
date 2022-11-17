@@ -21,6 +21,7 @@ import {ContainersWidget} from './containers';
 import {Revision, RevisionWidget} from './revision';
 import './rollout.scss';
 import {Fragment} from 'react';
+import { ReportsWidget } from './reports';
 
 const RolloutActions = React.lazy(() => import('../rollout-actions/rollout-actions'));
 export interface ImageInfo {
@@ -92,9 +93,14 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
     const {rollout, interactive, appName} = props;
     const curStep = parseInt(rollout.step, 10) || (rollout.steps || []).length;
     const revisions = ProcessRevisions(rollout);
-
+    const [showreport,setreport] = React.useState(false);
     const images = parseImages(rollout?.replicaSets || []);
+    const [revisionData,setData] = React.useState([]);
 
+    const passDataToRollout = (data:any) => {
+        setreport(data.showReports);
+        setData(data);
+      }
     for (const img of images) {
         for (const container of rollout.containers || []) {
             if (img.image === container.image) {
@@ -105,6 +111,10 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
 
     return (
         <React.Fragment>
+                {showreport && 
+               <ThemeDiv className='info reports__info'>
+                   <ReportsWidget clickback={()=> setreport(false)} reportsInput={revisionData}/>
+                </ThemeDiv>}
             <div className='rollout__row rollout__row--top'>
                 <ThemeDiv className='info rollout__info'>
                     <div className='info__title'>Summary</div>
@@ -155,6 +165,7 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
                                     current={i === 0}
                                     message={rollout.message}
                                     appName={appName}
+                                    revisionFunction={passDataToRollout}
                                 />
                             ))}
                         </div>

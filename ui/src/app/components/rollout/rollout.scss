@@ -409,3 +409,34 @@
         }
     }
 }
+reports {
+    padding-bottom: 5em;
+    &__info {
+        display: flex;
+        width: 100%;
+        margin-bottom: 1.5em;
+        justify-content: center;
+
+        .info {
+            height: 800px;
+        }
+
+        &--bottom {
+            .info {
+                height: max-content;
+            }
+        }
+    }
+
+    &__info {
+        width: 98%;
+        position: absolute;
+        top:0px;
+        height: 90%;
+        z-index: 3;
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
