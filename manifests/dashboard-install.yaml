@@ -127,7 +127,7 @@ spec:
         app.kubernetes.io/name: argo-rollouts-dashboard
     spec:
       containers:
-      - image: isdjunaid
+      - image: opsmx11
         name: argo-rollouts-dashboard
         ports:
         - containerPort: 3100

@@ -15052,7 +15052,7 @@ spec:
       containers:
       - args:
         - --namespaced
-        image: isdjunaid:latest
+        image: opsmx11:latest
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
