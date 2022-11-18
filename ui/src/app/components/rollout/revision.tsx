@@ -137,7 +137,7 @@ const AnalysisRunWidget = (props: {analysisRuns: RolloutAnalysisRunInfo[],appNam
                                                     nameSpace: namespace,
                                                     version: version,
                                                     showReports: true,
-                                                    analysisName: `Analysis + ${temp[len - 2] + '-' + temp[len - 1]}`
+                                                    analysisName: `Analysis ${temp[len - 2] + '-' + temp[len - 1]}`
                                                 }
                                                {props.analysisRunFunction(data)}
                                         }

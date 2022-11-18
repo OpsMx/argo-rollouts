@@ -74,7 +74,7 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
         <WaitFor loading={loading}>
         <div style={{ margin: '1em', width: '100%', height: '100%' }}>
           <div>
-            <div className='bc-element bc-first' style={{ left: '0px' }}>
+            <div className='bc-element bc-first' style={{ left: '0px' }} onClick={() => props.clickback()}>
               <div className='bc-text bc-text-first addPointer'>Back to Dashboard</div>
               <div className='bc-arrow' style={{ zIndex: 2 }}></div>
             </div>
