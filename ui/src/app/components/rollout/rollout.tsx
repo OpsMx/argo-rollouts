@@ -101,7 +101,9 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
         setreport(data.showReports);
         setData(data);
         const divElement = document.getElementById('reportId');
-        divElement.scrollIntoView({ behavior: 'smooth' });
+        if(divElement){
+            divElement.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     for (const img of images) {
         for (const container of rollout.containers || []) {
