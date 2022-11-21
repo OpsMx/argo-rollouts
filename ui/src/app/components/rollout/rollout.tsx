@@ -100,10 +100,7 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
     const passDataToRollout = (data:any) => {
         setreport(data.showReports);
         setData(data);
-        const divElement = document.getElementById('reportId');
-        if(divElement){
-            divElement.scrollIntoView({ behavior: 'smooth' });
-        }
+        window.scrollTo(0,0);
       }
     for (const img of images) {
         for (const container of rollout.containers || []) {
@@ -116,7 +113,7 @@ export const RolloutWidget = (props: {rollout: RolloutRolloutInfo; interactive?:
     return (
         <React.Fragment>
                 {showreport && 
-               <ThemeDiv id ='reportId' className='report-bg reports__info'>
+               <ThemeDiv className='report-bg reports__info'>
                    <ReportsWidget clickback={()=> setreport(false)} reportsInput={revisionData}/>
                 </ThemeDiv>}
             <div className='rollout__row rollout__row--top'>
