@@ -7,9 +7,20 @@ import '../pods/pods.scss';
 export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
     const [getURL, setURL] = React.useState('');
     const [analysisName, setAnalysisName] = React.useState('');
+    const [validUrl, setValidUrl] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
+    const [errorMessage, setErrorMessage] = React.useState('');
+    const isValidUrl = (props: string) => {
+      try {
+        new URL(props);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
     const LoadApiCalls = (props: any) => {
       // console.log('1stapi',props);
+        setErrorMessage('');
         setLoading(true);
         setAnalysisName(props?.reportsInput?.analysisName);
         let url2 = '/api/v1/applications/' + props.reportsInput.appName + '/resource?name=' + props.reportsInput.resourceName + '&appNamespace=' + props.reportsInput.nameSpace + '&namespace=' + props.reportsInput.nameSpace + '&resourceName=' + props.reportsInput.resourceName + '&version=' + props.reportsInput.version + '&kind=AnalysisRun&group=argoproj.io';
@@ -24,9 +35,15 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
               if (b.status?.metricResults[b.status.metricResults.length - 1]?.measurements[b.status.metricResults.length - 1]?.metadata['job-name']) {
                 fetchEndpointURL(props.reportsInput.appName, props.reportsInput.resourceName, props.reportsInput.nameSpace, props.reportsInput.version, b.status?.metricResults[b.status.metricResults.length - 1]?.measurements[b.status.metricResults.length - 1]?.metadata['job-name']);
               }
+            }else{
+              setValidUrl(false);
+              setLoading(false);
+              setErrorMessage('Not able to find the job name');
             }
           }).catch(err => {
-            console.error('res.data', err)
+            setValidUrl(false);
+            setLoading(false);
+            setErrorMessage('Failed to load, invalid URL');
           });
       };
 
@@ -47,13 +64,17 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
                 let stringValue = a.status?.conditions[indexValue]?.message.split(/\n/)[3];
                 // let stringValue1 = a.status?.conditions[indexValue]?.message.split(/\n/)[1];
                 // var user =  stringValue1.substring(stringValue1.indexOf(':') + 1).trim();
-                var reportId =  stringValue2.substring(stringValue2.indexOf(':') + 1).trim();
-                var reportURL = stringValue.substring(stringValue.indexOf(':') + 1).trim() + `&p=${reportId}`;
-                console.log(reportURL);
+                if(stringValue.split(':')[0].trim() == "reportURL"){
+                  var reportId =  stringValue2.substring(stringValue2.indexOf(':') + 1).trim();
+                  if(reportId){
+                    var reportURL = stringValue.substring(stringValue.indexOf(':') + 1).trim() + `&p=${reportId}`;
+                  }
                 // console.log(user);
-                setURL(reportURL);
-                setLoading(false);
-                // let b = setInterval(() => {
+                  if(isValidUrl(reportURL)){
+                    setValidUrl(true);
+                    setURL(reportURL);
+                    setLoading(false);
+                    // let b = setInterval(() => {
                 //   let reportPage = document.getElementById("reportPage") as HTMLIFrameElement;
                 //   if(reportPage){
                 //     reportPage.contentWindow.postMessage(user,"*");
@@ -67,9 +88,28 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
                 //   }
                 // });
                 //window.open(reportURL, '_blank');
+              
+                  }else{
+                    setValidUrl(false);
+                    setLoading(false);
+                    setErrorMessage('Failed to load, invalid URL');
+                  }
+                }else{
+                  setValidUrl(false);
+                  setLoading(false);
+                  setErrorMessage('Failed to load, invalid URL');
+                }
               }
+              
+            }else{
+              setValidUrl(false);
+              setLoading(false);
+              setErrorMessage('Failed to load, invalid URL');
             }
           }).catch(err => {
+            setValidUrl(false);
+            setLoading(false);
+            setErrorMessage('Failed to load, invalid URL');
           });
       }
       React.useEffect(() => {
@@ -79,7 +119,6 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
       return (
         <WaitFor loading={loading}>
         <div style={{ margin: '1em', width: '100%', height: '100%' }}>
-          <div>
             <div className='bc-element bc-first' style={{ left: '0px' }} onClick={() => props.clickback()}>
               <div className='bc-text bc-text-first addPointer'>Back to Dashboard</div>
               <div className='bc-arrow' style={{ zIndex: 2 }}></div>
@@ -93,10 +132,9 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
               <div className='bc-arrow bc-arrow-last' style={{ zIndex: 2 }}></div>
             </div>
             <div style={{ clear: 'both' }}></div>
-          </div>
-          <div style={{ width: '100%', alignItems: 'center', height: '100%' }}>
-            <iframe src={getURL} width="100%" height="90%" id="reportPage"></iframe>
-          </div>
+            {validUrl && <iframe src={getURL} width="100%" height="90%"></iframe>}
+            {!validUrl && 
+            <div className='reports-viewer__settings'><p style={{ padding: '2.5em', textAlign: 'center',margin: 'auto'}}>{errorMessage}</p></div>}
         </div>
         </WaitFor>
       );
