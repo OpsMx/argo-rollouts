@@ -503,7 +503,7 @@
     margin-bottom: 1em;
 }
 .reports__error {
-    padding: 1em;
+    padding: 10em;
     overflow-x: auto;
     overflow-y: auto;
     height: 100%;
@@ -514,8 +514,8 @@
 .empty-state__icon {
     position: relative;
     background-color: #ccd6dd;
-    width: 15em;
-    height: 15em;
+    width: 10em;
+    height: 10em;
     border-radius: 7.5em;
     margin: 2em auto;
 }
@@ -525,4 +525,5 @@
     left: 50%;
     transform: translateY(-50%) translateX(-50%);
     color: #fff;
+    font-size: 9px;
 }

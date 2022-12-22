@@ -132,8 +132,7 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
                   <div className="empty-state__icon">
                     <i className="fa fa-file"></i>
                   </div>
-                  <h4 style={{color:'#155362'}}>Analysis not performed or Report not available</h4>
-                  <h5></h5>
+                  <h5 style={{color:'#155362'}}>Analysis not performed or Report not available</h5>
                 </div>
               </div>
             </div>}
