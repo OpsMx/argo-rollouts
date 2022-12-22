@@ -9,7 +9,6 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
     const [analysisName, setAnalysisName] = React.useState('');
     const [validUrl, setValidUrl] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
-    const [errorMessage, setErrorMessage] = React.useState('');
     const isValidUrl = (props: string) => {
       try {
         new URL(props);
@@ -20,7 +19,6 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
     }
     const LoadApiCalls = (props: any) => {
       // console.log('1stapi',props);
-        setErrorMessage('');
         setLoading(true);
         setAnalysisName(props?.reportsInput?.analysisName);
         let url2 = '/api/v1/applications/' + props.reportsInput.appName + '/resource?name=' + props.reportsInput.resourceName + '&appNamespace=' + props.reportsInput.nameSpace + '&namespace=' + props.reportsInput.nameSpace + '&resourceName=' + props.reportsInput.resourceName + '&version=' + props.reportsInput.version + '&kind=AnalysisRun&group=argoproj.io';
@@ -38,12 +36,10 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
             }else{
               setValidUrl(false);
               setLoading(false);
-              setErrorMessage('Not able to find the job name');
             }
           }).catch(err => {
             setValidUrl(false);
             setLoading(false);
-            setErrorMessage('Failed to load, invalid URL');
           });
       };
 
@@ -92,24 +88,20 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
                   }else{
                     setValidUrl(false);
                     setLoading(false);
-                    setErrorMessage('Failed to load, invalid URL');
                   }
                 }else{
                   setValidUrl(false);
                   setLoading(false);
-                  setErrorMessage('Failed to load, invalid URL');
                 }
               }
               
             }else{
               setValidUrl(false);
               setLoading(false);
-              setErrorMessage('Failed to load, invalid URL');
             }
           }).catch(err => {
             setValidUrl(false);
             setLoading(false);
-            setErrorMessage('Failed to load, invalid URL');
           });
       }
       React.useEffect(() => {
@@ -117,7 +109,7 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
       }, []);
 
       return (
-        <WaitFor loading={loading}>
+      <WaitFor loading={loading}>
         <div style={{ margin: '1em', width: '100%', height: '100%' }}>
             <div className='bc-element bc-first' style={{ left: '0px' }} onClick={() => props.clickback()}>
               <div className='bc-text bc-text-first addPointer'>Back to Dashboard</div>
@@ -134,8 +126,18 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
             <div style={{ clear: 'both' }}></div>
             {validUrl && <iframe src={getURL} width="100%" height="90%"></iframe>}
             {!validUrl && 
-            <div className='reports-viewer__settings'><p style={{ padding: '2.5em', textAlign: 'center',margin: 'auto'}}>{errorMessage}</p></div>}
-        </div>
-        </WaitFor>
+            <div style={{width: '100%', height: '100%', backgroundColor:'#dae1eb'}}>
+              <div className="reports__error">
+                <div className="empty-state">
+                  <div className="empty-state__icon">
+                    <i className="fa fa-file"></i>
+                  </div>
+                  <h4 style={{color:'#155362'}}>Analysis not performed or Report not available</h4>
+                  <h5></h5>
+                </div>
+              </div>
+            </div>}
+          </div>
+      </WaitFor>
       );
 };
