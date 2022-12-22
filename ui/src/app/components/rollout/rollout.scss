@@ -447,6 +447,12 @@
     padding: 0px;
     background-color: #fff;
 }
+.report-error-bg {
+    border: 1px solid #ccd6dd;
+    border-radius: 5px;
+    padding: 0px;
+    background-color: #dae1eb;
+}
 .bc-element {
     display: inline-block;
     position: relative;
@@ -495,4 +501,29 @@
 .reports-viewer__settings {
     display: flex;
     margin-bottom: 1em;
+}
+.reports__error {
+    padding: 10em;
+    overflow-x: auto;
+    overflow-y: auto;
+    height: 100%;
+}
+.empty-state {
+    text-align: center;
+}
+.empty-state__icon {
+    position: relative;
+    background-color: #ccd6dd;
+    width: 10em;
+    height: 10em;
+    border-radius: 7.5em;
+    margin: 2em auto;
+}
+.empty-state__icon i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    color: #fff;
+    font-size: 9px;
 }
