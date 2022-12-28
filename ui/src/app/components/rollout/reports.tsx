@@ -7,7 +7,7 @@ import '../pods/pods.scss';
 export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
     const [getURL, setURL] = React.useState('');
     const [analysisName, setAnalysisName] = React.useState('');
-    const [validUrl, setValidUrl] = React.useState(false);
+    const [validUrl, setValidUrl] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
     let conditionArray: any[] = [];
     let jobsList: any[] = [];
@@ -58,8 +58,9 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
             return response.json()
           })
           .then((data: any) => {
+            if(data.manifest.includes('message')) {
             let a = JSON.parse(data.manifest);
-          a.status.conditions.filter((conlist: { type: string; }) => conlist.type === 'OpsmxAnalysis').map((element: any) => { conditionArray = [...conditionArray, element] });
+            a.status.conditions.filter((conlist: { type: string; }) => conlist.type === 'OpsmxAnalysis').map((element: any) => { conditionArray = [...conditionArray, element] });
             const latest = conditionArray.reduce(function (r, a) {
               return r.lastProbeTime > a.lastProbeTime ? r : a;
             });
@@ -73,16 +74,23 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
                   var reportURL = stringValue.substring(stringValue.indexOf(':') + 1).trim() + `&p=${reportId}`;
                 }
                 if(isValidUrl(reportURL)){
-                  setValidUrl(true);
-                  setLoading(false);
-                  setURL(reportURL);
+                  setTimeout(() => {
+                    setValidUrl(true);
+                    setLoading(false);
+                    setURL(reportURL);
+                  }, 600);
                 }else{
                   setValidUrl(false);
                   setLoading(false);
                 }
               } 
             }
-          
+          }else{
+            if (jobsList.length - 1 === lastIterationJob) {
+              setValidUrl(false);
+              setLoading(false);
+            }
+          }
         }).catch(err => {
         });
     }
