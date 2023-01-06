@@ -102,7 +102,11 @@ const AnalysisRunWidget = (props: {analysisRuns: RolloutAnalysisRunInfo[],appNam
                 {analysisRuns.map((ar) => {
                     let temp = ar.objectMeta.name.split('-');
                     let len = temp.length;
+                    
+                     {console.log('details',ar)}
+
                     let resourceName = ar.objectMeta.name;
+                    // let appNamespace = ar.objectMeta.appNamespace,
                     let namespace = ar.objectMeta.namespace;
                     let version = ar.objectMeta.resourceVersion;
                     return (
