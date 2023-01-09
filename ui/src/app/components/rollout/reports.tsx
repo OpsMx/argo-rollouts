@@ -20,10 +20,23 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
         return false;
       }
     }
-    const LoadApiCalls = (props: any) => {
+    const getAppnamespace = (props: any) => {
+        let url1 = 'api/v1/applications?fields=items.metadata.namespace&selector=&appNamespace=&name=' + props.reportsInput.appName
+        fetch(url1)
+          .then(response => {
+            return response.json()
+          })
+          .then((data: any) => {
+            if(data.items[0].metadata.namespace){
+              LoadApiCalls(props,data.items[0].metadata.namespace)
+            }
+          }).catch(err => {
+          });
+      };
+    const LoadApiCalls = (props: any,appNamespace: string) => {
         setLoading(true);
         setAnalysisName(props?.reportsInput?.analysisName);
-        let url2 = '/api/v1/applications/' + props.reportsInput.appName + '/resource?name=' + props.reportsInput.resourceName + '&appNamespace=' + props.reportsInput.nameSpace + '&namespace=' + props.reportsInput.nameSpace + '&resourceName=' + props.reportsInput.resourceName + '&version=' + props.reportsInput.version + '&kind=AnalysisRun&group=argoproj.io';
+        let url2 = '/api/v1/applications/' + props.reportsInput.appName + '/resource?name=' + props.reportsInput.resourceName + '&appNamespace=' + appNamespace + '&namespace=' + props.reportsInput.nameSpace + '&resourceName=' + props.reportsInput.resourceName + '&version=' + props.reportsInput.version + '&kind=AnalysisRun&group=argoproj.io';
         fetch(url2)
           .then(response => {
             return response.json()
@@ -36,7 +49,7 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
               mResults.forEach((element: any, index: number) => {
                 newJobs.push(element.measurements[0]?.metadata['job-name']);
                 if (b.status?.metricResults[index]?.measurements[0]?.metadata['job-name']) {
-                  fetchEndpointURL(props.reportsInput.appName, props.reportsInput.resourceName, props.reportsInput.nameSpace, props.reportsInput.version, b.status?.metricResults[index]?.measurements[0]?.metadata['job-name'], index);
+                  fetchEndpointURL(props.reportsInput.appName, props.reportsInput.resourceName, appNamespace, props.reportsInput.nameSpace, props.reportsInput.version, b.status?.metricResults[index]?.measurements[0]?.metadata['job-name'], index);
                 }
                 jobsList = newJobs;
                 lastIterationJob = newJobs.length - 1;
@@ -51,8 +64,8 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
           });
       };
 
-    const fetchEndpointURL = (applicationName: String, resouceName: String, nameSpace: String, version: String, jobName: String, index: number) => {
-        let url3 = '/api/v1/applications/' + applicationName + '/resource?name=' + jobName + '&appNamespace=' + nameSpace + '&namespace=' + nameSpace + '&resourceName=' + jobName + '&version=v1&kind=Job&group=batch'
+    const fetchEndpointURL = (applicationName: String, resouceName: String, appNamespace:String, nameSpace: String, version: String, jobName: String, index: number) => {
+        let url3 = '/api/v1/applications/' + applicationName + '/resource?name=' + jobName + '&appNamespace=' + appNamespace + '&namespace=' + nameSpace + '&resourceName=' + jobName + '&version=v1&kind=Job&group=batch'
         fetch(url3)
           .then(response => {
             return response.json()
@@ -68,6 +81,10 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
             if(jobsList.length - 1 === lastIterationJob){
               let stringValue2 = latest.message.split(/\n/)[4];
               let stringValue = latest.message.split(/\n/)[3];
+              if(!stringValue){
+                setValidUrl(false);
+                setLoading(false)
+              } 
               if(stringValue.split(':')[0].trim() == "reportURL"){
                 var reportId = stringValue2.substring(stringValue2.indexOf(':') + 1).trim();
                 if(reportId){
@@ -95,7 +112,7 @@ export const ReportsWidget = (props: {  clickback: any; reportsInput: {}}) => {
         });
     }
     React.useEffect(() => {
-      { LoadApiCalls(props) }
+      { getAppnamespace(props) }
     }, []);
 
     return (
